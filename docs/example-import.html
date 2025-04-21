@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page</title>
+</head>
+<body>
+    <!-- Hidden input fields -->
+    <input type="hidden" name="custom GCLID">
+    <input type="hidden" name="custom UTM_SOURCE">
+    <input type="hidden" name="custom FBC">
+    <input type="hidden" name="custom FBP">
+    <!-- ... other inputs -->
+
+    <script>
+        // Define your site-specific configuration globally (optional)
+        // The name MUST match what main.js expects (e.g., handlerCustomConfigs)
+        var handlerCustomConfigs = [
+            // Override or provide specific configs here
+            { id: 'gclid', sourceType: 'url', urlParamName: 'gclid', targetInputName: 'custom GCLID', setCookie: { enabledOnUrlHit: true, cookieNameToSet: 'gclid', daysToExpiry: 30 } }, // Shorter expiry example
+            { id: 'utm_source', sourceType: 'url', urlParamName: 'utm_source', targetInputName: 'custom UTM_SOURCE' }
+            // Only include configs needed for this specific site if desired
+        ];
+        // If you DON'T define this global variable, the default config from src/config.js will be used by the setup in src/main.js
+    </script>
+
+    <!-- Include the compiled script -->
+    <script src="dist/unified-handler.min.js"></script>
+
+    <script>
+        // If main.js exposes init and doesn't auto-run with global check:
+        // Option A: Initialize with the global config if it exists
+        if (typeof UnifiedParamHandler !== 'undefined' && typeof handlerCustomConfigs !== 'undefined') {
+            UnifiedParamHandler.init(handlerCustomConfigs);
+        } else if (typeof UnifiedParamHandler !== 'undefined') {
+            // Option B: Initialize with default config bundled within the script
+            UnifiedParamHandler.init();
+        }
+
+        // If main.js handles the global check internally (like the example src/main.js),
+        // you might not need this second script block at all.
+    </script>
+</body>
+</html>
