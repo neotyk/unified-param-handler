@@ -146,4 +146,11 @@ export const defaultHandlerConfigs = [
     targetInputName: 'custom UTM_BROKER',
   },
   // Add more UTMs or other parameters here following the pattern
+
+  // --- Browser/Client Info --- 
+  {
+    id: 'userAgent',
+    // No sourceType needed as it's read directly from navigator
+    targetInputName: 'custom USER_AGENT', // Example name
+  },
 ];

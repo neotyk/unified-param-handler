@@ -241,4 +241,31 @@ describe('Core Engine Logic (src/engine.js)', () => {
         expect(document.querySelector('input[name="invalid-input"]').value).toBe(''); // Invalid one skipped
     });
 
+    // --- New Test for User Agent ---
+    test('init captures User Agent correctly', () => {
+        const userAgentConfig = getConfig('userAgent');
+        const input = addHiddenInput(userAgentConfig.targetInputName);
+        const mockUserAgent = 'Mozilla/5.0 (Test Environment)';
+
+        // Mock navigator.userAgent
+        const originalUserAgent = navigator.userAgent;
+        Object.defineProperty(navigator, 'userAgent', {
+            value: mockUserAgent,
+            writable: true,
+            configurable: true
+        });
+
+        init([userAgentConfig]); // Initialize with only the userAgent config
+
+        expect(input.value).toBe(mockUserAgent);
+        expect(console.error).not.toHaveBeenCalled();
+
+        // Restore original userAgent
+        Object.defineProperty(navigator, 'userAgent', {
+            value: originalUserAgent,
+            writable: true,
+            configurable: true
+        });
+    });
+
 });

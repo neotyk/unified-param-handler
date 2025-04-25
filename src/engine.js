@@ -200,7 +200,8 @@ export function init(customConfigs) {
             !config ||
             typeof config !== 'object' ||
             !config.id ||
-            !config.sourceType ||
+            // *** Allow missing sourceType for userAgent ***
+            (!config.sourceType && config.id !== 'userAgent') || 
             !config.targetInputName
         ) {
             utils.logError(`Invalid handler config: ${JSON.stringify(config)}`);
@@ -218,7 +219,18 @@ export function init(customConfigs) {
         }
 
         try {
-            processHandler(config, inputElement); // Pass element
+            // *** Handle userAgent specifically ***
+            if (config.id === 'userAgent') {
+                if (typeof navigator !== 'undefined' && navigator.userAgent) {
+                    inputElement.value = navigator.userAgent;
+                    utils.logDebug(`Input field '${config.targetInputName}' updated with User Agent.`);
+                } else {
+                    utils.logError('Cannot retrieve User Agent: navigator.userAgent is not available.');
+                }
+            } else {
+                // *** Process standard handlers ***
+                processHandler(config, inputElement); // Pass element
+            }
         } catch (error) {
             utils.logError(
                 `Unexpected error processing handler '${config.id}': ${error.message}`

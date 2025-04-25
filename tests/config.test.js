@@ -17,20 +17,27 @@ describe('Default Configuration (src/config.js)', () => {
       expect(typeof config).toBe('object');
       expect(config.id).toBeDefined();
       expect(typeof config.id).toBe('string');
-      expect(config.sourceType).toBeDefined();
-      expect(typeof config.sourceType).toBe('string');
-      expect(['url', 'cookie', 'url_or_cookie']).toContain(config.sourceType);
       expect(config.targetInputName).toBeDefined();
       expect(typeof config.targetInputName).toBe('string');
 
-      // Conditional checks based on sourceType
-      if (config.sourceType.includes('url')) {
-        expect(config.urlParamName).toBeDefined();
-        expect(typeof config.urlParamName).toBe('string');
-      }
-      if (config.sourceType.includes('cookie')) {
-        expect(config.cookieName).toBeDefined();
-        expect(typeof config.cookieName).toBe('string');
+      // *** Allow sourceType to be missing only for userAgent ***
+      if (config.id !== 'userAgent') {
+        expect(config.sourceType).toBeDefined();
+        expect(typeof config.sourceType).toBe('string');
+        expect(['url', 'cookie', 'url_or_cookie']).toContain(config.sourceType);
+
+        // Conditional checks based on sourceType
+        if (config.sourceType.includes('url')) {
+          expect(config.urlParamName).toBeDefined();
+          expect(typeof config.urlParamName).toBe('string');
+        }
+        if (config.sourceType.includes('cookie')) {
+          expect(config.cookieName).toBeDefined();
+          expect(typeof config.cookieName).toBe('string');
+        }
+      } else {
+        // For userAgent, sourceType should NOT be present
+        expect(config.sourceType).toBeUndefined();
       }
 
        // Check optional property types if they exist
