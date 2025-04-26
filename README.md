@@ -92,4 +92,4 @@ For detailed configuration options, default settings, and advanced examples, ple
 
 ## License
 
-This project is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License. See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 or later. See the [COPYING](./COPYING) file for details.
