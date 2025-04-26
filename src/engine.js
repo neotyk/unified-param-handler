@@ -132,7 +132,7 @@ function processHandler(config, inputElement) {
                     // finalValue already holds rawValue, so no action needed
                 }
             } catch (formatError) {
-                logError(`Error applying formatting function for handler '${config.id}': ${formatError.message}. Using raw value.`);
+                utils.logError(`Error applying formatting function for handler '${config.id}': ${formatError.message}. Using raw value.`);
                 // finalValue already holds rawValue
             }
         } // If valueSource was 'cookie', finalValue remains the rawValue
