@@ -153,4 +153,16 @@ export const defaultHandlerConfigs = [
     // No sourceType needed as it's read directly from navigator
     targetInputName: 'custom USER_AGENT', // Example name
   },
+  {
+    id: 'userAgent',
+    sourceType: 'user_agent', // Special source type for User Agent
+    targetInputName: 'userAgent', // Target input name
+    // No URL param or cookie needed
+  },
+  {
+    id: 'clientIp',
+    sourceType: 'ip_address', // Special source type for Client IP
+    targetInputName: 'clientIp', // Target input name
+    // No URL param or cookie needed
+  }
 ];

@@ -268,4 +268,33 @@ describe('Core Engine Logic (src/engine.js)', () => {
         });
     });
 
+    // --- New Test for Client IP ---
+    test('init captures Client IP correctly', async () => {
+        const clientIpConfig = getConfig('clientIp');
+        const input = addHiddenInput(clientIpConfig.targetInputName);
+        const mockIp = '192.0.2.1';
+
+        // Mock global fetch
+        const originalFetch = global.fetch;
+        global.fetch = jest.fn(() =>
+            Promise.resolve({
+                ok: true,
+                text: () => Promise.resolve(mockIp + '\n'), // Simulate trailing newline
+            })
+        );
+
+        init([clientIpConfig]); // Initialize with only the clientIp config
+
+        // Since fetch is asynchronous, we need to wait for the promise chain to resolve
+        // Wait for the fetch promise itself to resolve and the subsequent .then() callbacks
+        await global.fetch().then(res => res.text()); // Wait for the mocked fetch and text processing
+
+        expect(global.fetch).toHaveBeenCalledWith('https://checkip.amazonaws.com/');
+        expect(input.value).toBe(mockIp); // Check trimmed IP
+        expect(console.error).not.toHaveBeenCalled();
+
+        // Restore original fetch
+        global.fetch = originalFetch;
+    });
+
 });

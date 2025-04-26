@@ -13,13 +13,18 @@ This library helps ensure that tracking parameters captured on landing pages are
 *   Populates hidden HTML input fields with the found values.
 *   Handles asynchronous cookie setting with configurable retries.
 *   Supports custom formatting functions for values before storage.
-*   Comes with default configurations for common parameters (fbclid, fbp, gclid, wbraid, gbraid, UTMs, User Agent).
+*   Captures User Agent and Client IP address.
+*   Comes with default configurations for common parameters (fbclid, fbp, gclid, wbraid, gbraid, UTMs, User Agent, Client IP).
 *   Allows complete configuration customization.
 
 ## Installation
 
-1.  **Build the project:**
-    Run the build command specified in `package.json` (e.g., `npm run build` or `yarn build`). This will generate the distributable file (e.g., `dist/unified-handler.js`).
+1.  **Get the code:**
+    *   Clone the repository or download the `unified-handler-dist.zip` file from the [GitHub Releases](https://github.com/atomicagility/unified-param-handler/releases) page. This zip file contains the built library (`dist/`), the README, and the license.
+    *   Alternatively, if using npm/yarn, you can potentially install it as a package (if published).
+
+2.  **Build the project (if cloning):**
+    If you cloned the repository, run the build command specified in `package.json` (e.g., `npm run build` or `yarn build`). This will generate the distributable file (e.g., `dist/unified-handler.min.js`).
 
     ```bash
     # Using npm
@@ -50,7 +55,8 @@ This library helps ensure that tracking parameters captured on landing pages are
       <input type="hidden" name="custom GCLID">
       <input type="hidden" name="custom UTM_SOURCE">
       <!-- Add other necessary hidden fields -->
-      <input type="hidden" name="custom USER_AGENT">
+      <input type="hidden" name="userAgent"> 
+      <input type="hidden" name="clientIp">
 
       <button type="submit">Submit</button>
     </form>

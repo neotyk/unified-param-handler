@@ -21,6 +21,8 @@ Each object in the configuration array defines a handler and can have the follow
         *   `'url'`: Look for the value in the URL query parameters only.
         *   `'cookie'`: Look for the value in the document's cookies only.
         *   `'url_or_cookie'`: Look in the URL query parameters first. If not found, look in the cookies.
+        *   `'user_agent'`: Special type to read `navigator.userAgent`.
+        *   `'ip_address'`: Special type to fetch the client's IP address from an external service (`https://checkip.amazonaws.com/`).
 *   **`urlParamName`**: (string, Required if `sourceType` includes `'url'`)
     *   The exact name of the URL query parameter to search for (case-sensitive).
     *   Example: `'fbclid'`, `'utm_source'`.
@@ -80,9 +82,13 @@ The library comes with a pre-defined set of handlers (`defaultHandlerConfigs`) c
 ### Browser/Client Info
 
 *   **`userAgent`**:
-    *   This is a special handler that doesn't use `sourceType`.
+    *   This is a special handler that uses `sourceType: 'user_agent'`.
     *   It directly reads the `navigator.userAgent` string.
-    *   Targets an input named `custom USER_AGENT`.
+    *   Targets an input named `userAgent`.
+*   **`clientIp`**:
+    *   This is a special handler that uses `sourceType: 'ip_address'`.
+    *   It fetches the client's public IP address by calling `https://checkip.amazonaws.com/`.
+    *   Targets an input named `clientIp`.
 
 ## How-To Examples
 
@@ -107,7 +113,8 @@ To use the library with all the default handlers:
   <input type="hidden" name="custom UTM_MEDIUM">
   <input type="hidden" name="custom UTM_CAMPAIGN">
   <!-- ... add inputs for other default handlers ... -->
-  <input type="hidden" name="custom USER_AGENT">
+  <input type="hidden" name="userAgent">
+  <input type="hidden" name="clientIp">
 </form>
 
 <script src="path/to/unified-param-handler.js"></script>

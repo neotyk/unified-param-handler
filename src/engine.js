@@ -227,6 +227,26 @@ export function init(customConfigs) {
                 } else {
                     utils.logError('Cannot retrieve User Agent: navigator.userAgent is not available.');
                 }
+            } else if (config.sourceType === 'ip_address') {
+                // *** Handle ip_address specifically ***
+                utils.logDebug(`Fetching Client IP for input '${config.targetInputName}'...`);
+                fetch('https://checkip.amazonaws.com/')
+                    .then(res => {
+                        if (!res.ok) {
+                            throw new Error(`HTTP error! status: ${res.status}`);
+                        }
+                        return res.text();
+                    })
+                    .then(ip => {
+                        const trimmedIp = ip.trim(); // Trim whitespace
+                        inputElement.value = trimmedIp;
+                        utils.logDebug(`Input field '${config.targetInputName}' updated with Client IP:`, trimmedIp);
+                    })
+                    .catch(error => {
+                        utils.logError(`Failed to fetch Client IP for '${config.targetInputName}': ${error.message}`);
+                        // Optionally clear the input or leave it as is
+                        // inputElement.value = ''; 
+                    });
             } else {
                 // *** Process standard handlers ***
                 processHandler(config, inputElement); // Pass element

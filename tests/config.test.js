@@ -20,13 +20,16 @@ describe('Default Configuration (src/config.js)', () => {
       expect(config.targetInputName).toBeDefined();
       expect(typeof config.targetInputName).toBe('string');
 
-      // *** Allow sourceType to be missing only for userAgent ***
-      if (config.id !== 'userAgent') {
-        expect(config.sourceType).toBeDefined();
+      // *** Allow sourceType to be missing OR be 'user_agent' or 'ip_address' ***
+      if (config.sourceType === 'user_agent' || config.sourceType === 'ip_address') {
+        // These are special source types, no further checks needed here for url/cookie names
+        expect(typeof config.sourceType).toBe('string');
+      } else if (config.sourceType) {
+        // For standard sourceTypes ('url', 'cookie', 'url_or_cookie')
         expect(typeof config.sourceType).toBe('string');
         expect(['url', 'cookie', 'url_or_cookie']).toContain(config.sourceType);
 
-        // Conditional checks based on sourceType
+        // Conditional checks based on standard sourceType
         if (config.sourceType.includes('url')) {
           expect(config.urlParamName).toBeDefined();
           expect(typeof config.urlParamName).toBe('string');
@@ -36,7 +39,9 @@ describe('Default Configuration (src/config.js)', () => {
           expect(typeof config.cookieName).toBe('string');
         }
       } else {
-        // For userAgent, sourceType should NOT be present
+        // If sourceType is missing, it must be the old userAgent config (which we might phase out)
+        // For now, we allow it to be undefined only if id is userAgent
+        expect(config.id).toBe('userAgent'); 
         expect(config.sourceType).toBeUndefined();
       }
 
