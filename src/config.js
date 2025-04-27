@@ -1,27 +1,33 @@
 // src/config.js
-import { formatFbClickId } from './utils.js'; // Import needed functions
+import { formatFbClickId } from './utils.js';
 
 /**
- * Central configuration array. Each object defines how to handle one parameter/cookie.
- *
- * Properties for each config object:
- * - id: (string) Unique internal identifier (e.g., 'fbc', 'gclid', 'utm_source'). Used mainly for logging.
- * - sourceType: (string) Where to look for the value:
- *     - 'url': Check URL query parameters only.
- *     - 'cookie': Check document cookies only.
- *     - 'url_or_cookie': Check URL first, then cookie if not found in URL.
- * - urlParamName: (string) [Required if sourceType includes 'url'] The exact name of the URL query parameter.
- * - cookieName: (string) [Required if sourceType includes 'cookie'] The exact name of the cookie.
- * - targetInputName: (string) [Required] The 'name' attribute of the target hidden input field.
- * - applyFormatting: (function) [Optional] A function to format the raw value before setting it. Receives the raw value as input.
- * - setCookie: (object) [Optional] Configuration for setting/updating a cookie.
- *     - enabledOnUrlHit: (boolean) Set the cookie if the value was found in the URL?
- *     - cookieNameToSet: (string) The name of the cookie to set/update.
- *     - daysToExpiry: (number) Lifespan of the cookie in days.
- * - retryMechanism: (object) [Optional, only applies if sourceType includes 'cookie'] Configuration for retrying cookie reads.
- *     - enabled: (boolean) Enable retry if cookie not found initially?
- *     - maxAttempts: (number) Maximum number of retry attempts.
- *     - interval: (number) Delay between retries in milliseconds.
+ * @typedef {Object} HandlerConfig
+ * @property {string} id - Unique internal identifier (e.g., 'fbc', 'gclid', 'utm_source'). Used mainly for logging.
+ * @property {'url'|'cookie'|'url_or_cookie'|'user_agent'|'ip_address'} sourceType - Where to look for the value.
+ *   - 'url': Check URL query parameters only.
+ *   - 'cookie': Check document cookies only.
+ *   - 'url_or_cookie': Check URL first, then cookie if not found in URL.
+ *   - 'user_agent': Get the browser's User Agent string.
+ *   - 'ip_address': Attempt to fetch the client's IP address (requires a supporting endpoint).
+ * @property {string} [urlParamName] - The exact name of the URL query parameter. Required if sourceType includes 'url'.
+ * @property {string} [cookieName] - The exact name of the cookie. Required if sourceType includes 'cookie'.
+ * @property {string} targetInputName - The 'name' attribute of the target hidden input field.
+ * @property {function(string): string} [applyFormatting] - Optional function to format the raw value before setting it. Receives the raw value.
+ * @property {object} [setCookie] - Optional configuration for setting/updating a cookie based on a found value.
+ * @property {boolean} [setCookie.enabledOnUrlHit] - Set the cookie if the value was found in the URL?
+ * @property {string} [setCookie.cookieNameToSet] - The name of the cookie to set/update.
+ * @property {number} [setCookie.daysToExpiry] - Lifespan of the cookie in days.
+ * @property {object} [retryMechanism] - Optional configuration for retrying cookie reads. Only applies if sourceType includes 'cookie'.
+ * @property {boolean} [retryMechanism.enabled] - Enable retry if cookie not found initially?
+ * @property {number} [retryMechanism.maxAttempts] - Maximum number of retry attempts.
+ * @property {number} [retryMechanism.interval] - Delay between retries in milliseconds.
+ */
+
+/**
+ * Default configuration array for common tracking parameters.
+ * Each object defines how to handle one parameter/cookie according to the HandlerConfig type.
+ * @type {HandlerConfig[]}
  */
 export const defaultHandlerConfigs = [
   // --- Facebook Handlers ---
@@ -147,7 +153,7 @@ export const defaultHandlerConfigs = [
   },
   // Add more UTMs or other parameters here following the pattern
 
-  // --- Browser/Client Info --- 
+  // --- Browser/Client Info ---
   {
     id: 'userAgent',
     // No sourceType needed as it's read directly from navigator
@@ -164,5 +170,5 @@ export const defaultHandlerConfigs = [
     sourceType: 'ip_address', // Special source type for Client IP
     targetInputName: 'clientIp', // Target input name
     // No URL param or cookie needed
-  }
+  },
 ];
