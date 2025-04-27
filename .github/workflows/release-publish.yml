@@ -57,7 +57,7 @@ jobs:
           asset_content_type: application/zip
 
   publish_npm:
-    needs: build_and_create_release
+    needs: release # Corrected job name
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
