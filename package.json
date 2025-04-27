@@ -1,6 +1,6 @@
 {
   "name": "unified-param-handler",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Handles URL parameters and cookies, updating hidden fields.",
   "main": "dist/unified-handler.js",
   "module": "dist/unified-handler.js",
@@ -48,7 +48,7 @@
   },
   "standard-version": {
     "skip": {
-      "commit": true,
+      "commit": false,
       "tag": false
     },
     "commitAll": true,
