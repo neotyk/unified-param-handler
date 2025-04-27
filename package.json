@@ -41,21 +41,6 @@
     "webpack": "^5.75.0",
     "webpack-cli": "^5.0.0"
   },
-  "eslintConfig": {
-    "extends": [
-      "eslint:recommended",
-      "prettier"
-    ],
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module"
-    },
-    "env": {
-      "browser": true,
-      "es2021": true,
-      "jest": true
-    }
-  },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5",

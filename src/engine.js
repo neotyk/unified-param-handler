@@ -298,7 +298,9 @@ export function init(customConfigs) {
       switch (config.sourceType) {
         case 'user_agent':
           if (typeof navigator !== 'undefined' && navigator.userAgent) {
-            inputElement.value = navigator.userAgent;
+            // Explicitly get the value before assigning
+            const userAgentValue = navigator.userAgent;
+            inputElement.value = userAgentValue;
             utils.logDebug(
               `Input field '${config.targetInputName}' updated with User Agent.`
             );
