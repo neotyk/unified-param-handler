@@ -1,10 +1,18 @@
 // src/engine.js
 import * as utils from './utils.js';
+// defaultHandlerConfigs will be from src/config.js or src/dummy-config.js based on build
 import { defaultHandlerConfigs } from './config.js';
+import { formatFbClickId } from './utils.js';
 
 /**
  * @typedef {import('./config.js').HandlerConfig} HandlerConfig
  */
+
+// Map of known formatter string names to their actual functions
+const knownFormatters = {
+  formatFbClickId: formatFbClickId,
+  // Add other known formatters here if needed in the future
+};
 
 /**
  * Waits for a specific cookie to appear and updates the target input field if found.
@@ -127,29 +135,39 @@ function processHandler(config, inputElement) {
   // 3. Process Found Value (or handle not found)
   if (rawValue !== null) {
     let finalValue = rawValue; // Initialize finalValue with the raw value
+    let formatterFunction = null;
 
-    // 3a. Apply Formatting ONLY if source was URL and formatter exists
-    if (valueSource === 'url' && typeof config.applyFormatting === 'function') {
+    // Determine the formatter function
+    if (typeof config.applyFormatting === 'function') {
+      formatterFunction = config.applyFormatting;
+    } else if (typeof config.applyFormatting === 'string') {
+      formatterFunction = knownFormatters[config.applyFormatting];
+      if (!formatterFunction) {
+        utils.logError(
+          `Unknown formatter string '${config.applyFormatting}' for handler '${config.id}'.`
+        );
+      }
+    }
+
+    // 3a. Apply Formatting ONLY if source was URL and formatter function is valid
+    if (valueSource === 'url' && typeof formatterFunction === 'function') {
       utils.logDebug(
         `Attempting formatting for '${config.id}' as source was URL.`
       );
       try {
-        const formatted = config.applyFormatting(rawValue);
+        const formatted = formatterFunction(rawValue);
         if (formatted !== null && formatted !== undefined) {
-          // *** IMPORTANT: Assign formatted value to finalValue ONLY here ***
           finalValue = formatted;
           utils.logDebug(`Formatted value for '${config.id}':`, finalValue);
         } else {
           utils.logDebug(
             `Formatting function for '${config.id}' returned null/undefined. Using raw value.`
           );
-          // finalValue already holds rawValue, so no action needed
         }
       } catch (formatError) {
         utils.logError(
           `Error applying formatting function for handler '${config.id}': ${formatError.message}. Using raw value.`
         );
-        // finalValue already holds rawValue
       }
     } // If valueSource was 'cookie', finalValue remains the rawValue
 
@@ -251,13 +269,84 @@ function fetchClientIpAndUpdateInput(inputElement, targetInputName) {
  * @param {HandlerConfig[]} [customConfigs] - Optional array of custom handler configurations. If not provided or invalid, uses `defaultHandlerConfigs`.
  */
 export function init(customConfigs) {
+  // customConfigs argument is from runtime
   utils.startGroup('Initializing Unified Parameter Handler');
-  const configsToUse =
-    Array.isArray(customConfigs) && customConfigs.length > 0
-      ? customConfigs
-      : defaultHandlerConfigs;
 
-  utils.logDebug('Using configurations:', configsToUse);
+  let baseConfigs;
+
+  // WEBPACK_BUILD_HAS_FIXED_CONFIG is true if --env customConfigPath or --env configName was used
+  if (
+    typeof WEBPACK_BUILD_HAS_FIXED_CONFIG !== 'undefined' &&
+    WEBPACK_BUILD_HAS_FIXED_CONFIG
+  ) {
+    utils.logDebug('Build has a fixed configuration.');
+    // If custom configs were injected at build time, use them exclusively
+    if (
+      typeof WEBPACK_CUSTOM_CONFIGS !== 'undefined' &&
+      Array.isArray(WEBPACK_CUSTOM_CONFIGS) &&
+      WEBPACK_CUSTOM_CONFIGS.length > 0
+    ) {
+      utils.logDebug('Using WEBPACK_CUSTOM_CONFIGS provided at build time.');
+      baseConfigs = WEBPACK_CUSTOM_CONFIGS;
+    } else {
+      // No build-time custom configs, so this must be a build filtered from defaultHandlerConfigs
+      // (src/config.js was NOT replaced with dummy-config.js in this case)
+      utils.logDebug(
+        'Using defaultHandlerConfigs (potentially filtered by WEBPACK_CONFIG_NAME).'
+      );
+      baseConfigs = defaultHandlerConfigs; // These are the original defaults
+    }
+    if (customConfigs) {
+      utils.logDebug(
+        'Runtime customConfigs argument ignored due to fixed build configuration.'
+      );
+    }
+  } else {
+    // Standard behavior: runtime customConfigs take precedence over defaults
+    utils.logDebug(
+      'Build does not have a fixed configuration. Runtime configs can be used.'
+    );
+    if (Array.isArray(customConfigs) && customConfigs.length > 0) {
+      utils.logDebug('Using customConfigs provided at runtime.');
+      baseConfigs = customConfigs;
+    } else {
+      utils.logDebug('Using defaultHandlerConfigs from src/config.js.');
+      baseConfigs = defaultHandlerConfigs;
+    }
+  }
+
+  let configsToUse = baseConfigs;
+
+  // Filter if WEBPACK_CONFIG_NAME is set (applies to both fixed and non-fixed config builds)
+  if (typeof WEBPACK_CONFIG_NAME !== 'undefined' && WEBPACK_CONFIG_NAME) {
+    utils.logDebug(
+      `Webpack build specified configName to filter: ${WEBPACK_CONFIG_NAME}`
+    );
+    // Ensure baseConfigs is an array before trying to find
+    if (Array.isArray(baseConfigs)) {
+      const singleConfig = baseConfigs.find(
+        (c) => c.id === WEBPACK_CONFIG_NAME
+      );
+      if (singleConfig) {
+        configsToUse = [singleConfig];
+        utils.logDebug(
+          `Filtered to use only specified config ID: ${WEBPACK_CONFIG_NAME}`,
+          configsToUse
+        );
+      } else {
+        utils.logError(
+          `Specified configName '${WEBPACK_CONFIG_NAME}' not found in the chosen base configurations. Using all chosen base configurations.`
+        );
+      }
+    } else {
+      utils.logError(
+        'Base configurations are not an array, cannot filter by WEBPACK_CONFIG_NAME.'
+      );
+      configsToUse = []; // Or handle as an error appropriately
+    }
+  }
+
+  utils.logDebug('Final configurations to use:', configsToUse);
 
   if (!Array.isArray(configsToUse) || configsToUse.length === 0) {
     utils.logError('Handler configurations are missing or empty.');

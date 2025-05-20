@@ -11,6 +11,15 @@
     "build:dev": "webpack --mode development --env development",
     "build": "webpack --mode production --env production",
     "watch": "webpack --watch --mode development --env development",
+    "build:fbc:dev": "webpack --mode development --env development --env configName=fbc",
+    "build:fbc": "webpack --mode production --env production --env configName=fbc",
+    "build:gclid:dev": "webpack --mode development --env development --env configName=gclid",
+    "build:gclid": "webpack --mode production --env production --env configName=gclid",
+    "build:custom:dev": "webpack --mode development --env development --env customConfigPath=./my-custom-config.js",
+    "build:custom": "webpack --mode production --env production --env customConfigPath=./my-custom-config.js",
+    "build:custom:filtered": "webpack --mode production --env production --env customConfigPath=./my-custom-config.js --env configName=my_special_param",
+    "build:sc": "webpack --mode production --env production --env customConfigPath=./sc-config.js --env configName=sc",
+    "build:sc:dev": "webpack --mode development --env development --env customConfigPath=./sc-config.js --env configName=sc",
     "prepare": "husky",
     "release": "standard-version"
   },
@@ -86,6 +95,28 @@
         "hidden": true
       }
     ]
+  },
+  "eslintConfig": {
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2020,
+      "sourceType": "module"
+    },
+    "env": {
+      "browser": true,
+      "es6": true,
+      "node": true
+    },
+    "globals": {
+      "WEBPACK_BUILD_HAS_FIXED_CONFIG": "readonly",
+      "WEBPACK_CUSTOM_CONFIGS": "readonly",
+      "WEBPACK_CONFIG_NAME": "readonly"
+    },
+    "rules": {
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+    }
   },
   "lint-staged": {
     "*.js": [

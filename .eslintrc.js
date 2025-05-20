@@ -13,6 +13,9 @@ module.exports = {
   globals: {
     global: 'readonly',
     addHiddenInput: 'readonly',
+    WEBPACK_BUILD_HAS_FIXED_CONFIG: 'readonly',
+    WEBPACK_CUSTOM_CONFIGS: 'readonly',
+    WEBPACK_CONFIG_NAME: 'readonly',
   },
   rules: {
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],

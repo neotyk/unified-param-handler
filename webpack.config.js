@@ -1,42 +1,102 @@
 // webpack.config.js
 const path = require('path');
+const webpack = require('webpack');
 
-module.exports = (env, argv) => {
+module.exports = (env, _argv) => {
+  // Changed argv to _argv
   const isProduction = env.production === true;
+  const configName = env.configName || null;
+  const customConfigPath = env.customConfigPath || null;
+
+  let customConfigsContent = null;
+  let useCustomConfig = false;
+
+  if (customConfigPath) {
+    try {
+      const resolvedPath = path.resolve(customConfigPath);
+      customConfigsContent = require(resolvedPath);
+      console.log(`Successfully loaded custom config from: ${resolvedPath}`);
+      useCustomConfig = true; // Mark that custom config is successfully loaded
+    } catch (e) {
+      console.error(
+        `Error loading custom config from ${customConfigPath}: ${e.message}`
+      );
+      // Proceed without custom config, customConfigsContent remains null
+    }
+  }
+
+  const buildHasFixedConfig = useCustomConfig || !!configName;
+
+  let filename;
+  let outputConfigNamePart = configName;
+
+  if (useCustomConfig && !configName) {
+    outputConfigNamePart = 'custom';
+  }
+
+  if (isProduction) {
+    filename = outputConfigNamePart
+      ? `unified-handler.${outputConfigNamePart}.min.js`
+      : 'unified-handler.min.js';
+  } else {
+    filename = outputConfigNamePart
+      ? `unified-handler.${outputConfigNamePart}.js`
+      : 'unified-handler.js';
+  }
+
+  const plugins = [
+    new webpack.DefinePlugin({
+      WEBPACK_CONFIG_NAME: JSON.stringify(configName),
+      WEBPACK_CUSTOM_CONFIGS: JSON.stringify(customConfigsContent),
+      WEBPACK_BUILD_HAS_FIXED_CONFIG: JSON.stringify(buildHasFixedConfig),
+    }),
+  ];
+
+  if (useCustomConfig) {
+    plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /src\/config\.js/, // Resource to replace
+        path.resolve(__dirname, 'src/dummy-config.js') // New resource
+      )
+    );
+    console.log(
+      'Replaced src/config.js with src/dummy-config.js for this custom build.'
+    );
+  }
 
   return {
     mode: isProduction ? 'production' : 'development',
-    entry: './src/main.js', // Entry point
+    entry: './src/main.js',
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: isProduction ? 'unified-handler.min.js' : 'unified-handler.js',
-      library: { // Expose the module's exports globally
-        name: 'UnifiedParamHandler', // The global variable name (window.UnifiedParamHandler)
-        type: 'umd', // Universal Module Definition - works everywhere
-        export: 'default', // If main.js exports a default object
+      filename: filename,
+      library: {
+        name: 'UnifiedParamHandler',
+        type: 'umd',
+        export: 'default',
       },
-      globalObject: 'this', // Important for UMD compatibility
-      clean: true, // Clean the dist folder before build
+      globalObject: 'this',
+      clean: true,
     },
-    devtool: isProduction ? false : 'inline-source-map', // Source maps for dev
+    devtool: isProduction ? false : 'inline-source-map',
     module: {
       rules: [
         {
-          test: /\.js$/, // Apply babel-loader to all .js files
+          test: /\.js$/,
           exclude: /node_modules/,
           use: {
             loader: 'babel-loader',
             options: {
-              presets: ['@babel/preset-env'] // Transpile based on browser targets
-            }
-          }
-        }
-      ]
+              presets: ['@babel/preset-env'],
+            },
+          },
+        },
+      ],
     },
     optimization: {
-      minimize: isProduction, // Minimize only in production
+      minimize: isProduction,
     },
-    // (Optional) Add target for browser compatibility if needed
-    // target: ['web', 'es5'], // Example: target older browsers
+    plugins: plugins, // Use the configured plugins array
+    // target: ['web', 'es5'],
   };
 };
