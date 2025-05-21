@@ -16,6 +16,8 @@ module.exports = {
     WEBPACK_BUILD_HAS_FIXED_CONFIG: 'readonly',
     WEBPACK_CUSTOM_CONFIGS: 'readonly',
     WEBPACK_CONFIG_NAME: 'readonly',
+    WEBPACK_PACKAGE_VERSION: 'readonly',
+    WEBPACK_BUILD_NAME: 'readonly',
   },
   rules: {
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],

@@ -18,8 +18,8 @@
     "build:custom:dev": "webpack --mode development --env development --env customConfigPath=./my-custom-config.js",
     "build:custom": "webpack --mode production --env production --env customConfigPath=./my-custom-config.js",
     "build:custom:filtered": "webpack --mode production --env production --env customConfigPath=./my-custom-config.js --env configName=my_special_param",
-    "build:sc": "webpack --mode production --env production --env customConfigPath=./sc-config.js --env configName=sc",
-    "build:sc:dev": "webpack --mode development --env development --env customConfigPath=./sc-config.js --env configName=sc",
+    "build:sc": "webpack --mode production --env production --env customConfigPath=./sc-config.js --env customConfigName=sc",
+    "build:sc:dev": "webpack --mode development --env development --env customConfigPath=./sc-config.js --env customConfigName=sc",
     "prepare": "husky",
     "release": "standard-version"
   },

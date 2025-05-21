@@ -20,14 +20,16 @@ function run() {
       typeof WEBPACK_BUILD_HAS_FIXED_CONFIG !== 'undefined' &&
       WEBPACK_BUILD_HAS_FIXED_CONFIG
     ) {
-      console.log(
-        '[Unified Param Handler] Initializing with fixed build-time configuration.'
-      );
+      let message = `[Unified Param Handler v${WEBPACK_PACKAGE_VERSION}] Initializing with fixed build-time configuration`;
+      if (typeof WEBPACK_BUILD_NAME !== 'undefined' && WEBPACK_BUILD_NAME) {
+        message += ` (Build: ${WEBPACK_BUILD_NAME})`;
+      }
+      console.log(message + '.');
       init(); // Call init without arguments, engine.js will use build-defined config
     } else {
       // Standard behavior for generic builds (not using customConfigPath or specific configName)
       console.log(
-        '[Unified Param Handler] Initializing, allowing runtime configuration.'
+        `[Unified Param Handler v${WEBPACK_PACKAGE_VERSION}] Initializing, allowing runtime configuration.`
       );
       // Avoid double init
       // Check if a global config exists, otherwise use default by calling init()

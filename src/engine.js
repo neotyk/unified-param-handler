@@ -274,27 +274,40 @@ export function init(customConfigs) {
 
   let baseConfigs;
 
-  // WEBPACK_BUILD_HAS_FIXED_CONFIG is true if --env customConfigPath or --env configName was used
   if (
     typeof WEBPACK_BUILD_HAS_FIXED_CONFIG !== 'undefined' &&
     WEBPACK_BUILD_HAS_FIXED_CONFIG
   ) {
     utils.logDebug('Build has a fixed configuration.');
-    // If custom configs were injected at build time, use them exclusively
     if (
       typeof WEBPACK_CUSTOM_CONFIGS !== 'undefined' &&
-      Array.isArray(WEBPACK_CUSTOM_CONFIGS) &&
-      WEBPACK_CUSTOM_CONFIGS.length > 0
+      WEBPACK_CUSTOM_CONFIGS // Check if it's not null/undefined
     ) {
-      utils.logDebug('Using WEBPACK_CUSTOM_CONFIGS provided at build time.');
-      baseConfigs = WEBPACK_CUSTOM_CONFIGS;
+      // If customConfigPath was used, WEBPACK_CUSTOM_CONFIGS is the content of that file.
+      // It might be an object { default: [...] } if the custom config uses export default,
+      // or a direct array if it uses module.exports = [...].
+      if (Array.isArray(WEBPACK_CUSTOM_CONFIGS)) {
+        baseConfigs = WEBPACK_CUSTOM_CONFIGS;
+      } else if (
+        WEBPACK_CUSTOM_CONFIGS.default &&
+        Array.isArray(WEBPACK_CUSTOM_CONFIGS.default)
+      ) {
+        baseConfigs = WEBPACK_CUSTOM_CONFIGS.default;
+      } else {
+        utils.logError(
+          'WEBPACK_CUSTOM_CONFIGS is not a valid array or an object with a default array property.'
+        );
+        baseConfigs = []; // Fallback to empty if structure is unexpected
+      }
+      utils.logDebug(
+        'Using WEBPACK_CUSTOM_CONFIGS provided at build time.',
+        baseConfigs
+      );
     } else {
-      // No build-time custom configs, so this must be a build filtered from defaultHandlerConfigs
-      // (src/config.js was NOT replaced with dummy-config.js in this case)
       utils.logDebug(
         'Using defaultHandlerConfigs (potentially filtered by WEBPACK_CONFIG_NAME).'
       );
-      baseConfigs = defaultHandlerConfigs; // These are the original defaults
+      baseConfigs = defaultHandlerConfigs;
     }
     if (customConfigs) {
       utils.logDebug(

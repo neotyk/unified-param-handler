@@ -1,12 +1,15 @@
 // webpack.config.js
 const path = require('path');
 const webpack = require('webpack');
+const packageJson = require('./package.json'); // Import package.json
 
 module.exports = (env, _argv) => {
   // Changed argv to _argv
   const isProduction = env.production === true;
-  const configName = env.configName || null;
+  const configFilterId = env.configName || null; // Used for WEBPACK_CONFIG_NAME for filtering
   const customConfigPath = env.customConfigPath || null;
+  // Determine the primary name for the build output/log based on customConfigName first, then configName
+  const buildIdentifier = env.customConfigName || env.configName || null;
 
   let customConfigsContent = null;
   let useCustomConfig = false;
@@ -21,17 +24,22 @@ module.exports = (env, _argv) => {
       console.error(
         `Error loading custom config from ${customConfigPath}: ${e.message}`
       );
-      // Proceed without custom config, customConfigsContent remains null
     }
   }
 
-  const buildHasFixedConfig = useCustomConfig || !!configName;
+  const buildHasFixedConfig =
+    useCustomConfig || !!configFilterId || !!env.customConfigName;
 
   let filename;
-  let outputConfigNamePart = configName;
+  let outputConfigNamePart; // This is for the filename and WEBPACK_BUILD_NAME
 
-  if (useCustomConfig && !configName) {
+  if (buildIdentifier) {
+    outputConfigNamePart = buildIdentifier;
+  } else if (useCustomConfig) {
+    // If no specific buildIdentifier (from customConfigName or configName) but customConfigPath is used
     outputConfigNamePart = 'custom';
+  } else {
+    outputConfigNamePart = null;
   }
 
   if (isProduction) {
@@ -46,9 +54,11 @@ module.exports = (env, _argv) => {
 
   const plugins = [
     new webpack.DefinePlugin({
-      WEBPACK_CONFIG_NAME: JSON.stringify(configName),
+      WEBPACK_CONFIG_NAME: JSON.stringify(configFilterId), // Still based on env.configName for filtering by ID
       WEBPACK_CUSTOM_CONFIGS: JSON.stringify(customConfigsContent),
       WEBPACK_BUILD_HAS_FIXED_CONFIG: JSON.stringify(buildHasFixedConfig),
+      WEBPACK_PACKAGE_VERSION: JSON.stringify(packageJson.version),
+      WEBPACK_BUILD_NAME: JSON.stringify(outputConfigNamePart), // Now correctly uses buildIdentifier
     }),
   ];
 
