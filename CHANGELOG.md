@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/neotyk/unified-param-handler/compare/v1.2.3...v1.3.0) (2025-05-21)
+
+
+### Features
+
+* **build:** Enhance tree-shaking for specialized builds ([ad63748](https://github.com/neotyk/unified-param-handler/commit/ad63748b8cce546f33bf9820f7ef2ee6d7e57d1a))
+
+
+### Bug Fixes
+
+* **build:** Update webpack configuration and logging for custom builds ([cc6c7f7](https://github.com/neotyk/unified-param-handler/commit/cc6c7f73b73cb5d94376b37425f37b86e490e755))
+
 ### [1.2.3](https://github.com/neotyk/unified-param-handler/compare/v1.2.2...v1.2.3) (2025-04-27)
 
 

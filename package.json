@@ -1,6 +1,6 @@
 {
   "name": "unified-param-handler",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "description": "Handles URL parameters and cookies, updating hidden fields.",
   "main": "dist/unified-handler.js",
   "module": "dist/unified-handler.js",
@@ -115,7 +115,12 @@
       "WEBPACK_CONFIG_NAME": "readonly"
     },
     "rules": {
-      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+      "no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ]
     }
   },
   "lint-staged": {
