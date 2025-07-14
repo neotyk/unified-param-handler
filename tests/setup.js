@@ -2,64 +2,96 @@
 
 // Mock console methods to prevent test runner noise and allow assertions
 global.console = {
-    log: jest.fn(), // Use jest.fn() to mock
-    warn: jest.fn(), // Use jest.fn() to mock
-    error: jest.fn(), // Use jest.fn() to mock
-    group: jest.fn(),
-    groupCollapsed: jest.fn(),
-    groupEnd: jest.fn(),
+  log: jest.fn(), // Use jest.fn() to mock
+  warn: jest.fn(), // Use jest.fn() to mock
+  error: jest.fn(), // Use jest.fn() to mock
+  group: jest.fn(),
+  groupCollapsed: jest.fn(),
+  groupEnd: jest.fn(),
 };
+
+// --- Mock localStorage ---
+const localStorageMock = (function () {
+  let store = {};
+  return {
+    getItem: function (key) {
+      return store[key] || null;
+    },
+    setItem: function (key, value) {
+      store[key] = value.toString();
+    },
+    removeItem: function (key) {
+      delete store[key];
+    },
+    clear: function () {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
 
 // Helper function to clear all cookies known to JSDOM
 function clearAllCookies() {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i];
-        const eqPos = cookie.indexOf("=");
-        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-        // Set expiry date to the past to delete the cookie
-        document.cookie = name.trim() + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-    }
-    // Final clear just in case
-    document.cookie = '';
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i];
+    const eqPos = cookie.indexOf('=');
+    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+    // Set expiry date to the past to delete the cookie
+    document.cookie =
+      name.trim() + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+  }
+  // Final clear just in case
+  document.cookie = '';
 }
 
 // Store the original cookie descriptor
-const originalCookieDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie') ||
-                               Object.getOwnPropertyDescriptor(HTMLDocument.prototype, 'cookie'); // Fallback for older JSDOM/browsers
+const originalCookieDescriptor =
+  Object.getOwnPropertyDescriptor(Document.prototype, 'cookie') ||
+  Object.getOwnPropertyDescriptor(HTMLDocument.prototype, 'cookie'); // Fallback for older JSDOM/browsers
 
 // Reset DOM/BOM mocks before each test
 beforeEach(() => {
-    // Reset JSDOM state if needed (location, cookies)
-    Object.defineProperty(window, 'location', {
-        writable: true,
-        value: { ...window.location, search: '', hostname: 'www.example.com' }, // Reset search and hostname
+  // Reset JSDOM state if needed (location, cookies)
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { ...window.location, search: '', hostname: 'www.example.com' }, // Reset search and hostname
+  });
+
+  // Spy on localStorage methods
+  jest.spyOn(window.localStorage, 'getItem');
+  jest.spyOn(window.localStorage, 'setItem');
+  jest.spyOn(window.localStorage, 'clear');
+  jest.spyOn(window.localStorage, 'removeItem');
+
+  // *** Spy on the document.cookie setter ***
+  if (originalCookieDescriptor) {
+    Object.defineProperty(document, 'cookie', {
+      ...originalCookieDescriptor,
+      set: jest.fn(originalCookieDescriptor.set), // Spy on the original setter
     });
+  }
 
-    // *** Spy on the document.cookie setter ***
-    if (originalCookieDescriptor) {
-        Object.defineProperty(document, 'cookie', {
-            ...originalCookieDescriptor,
-            set: jest.fn(originalCookieDescriptor.set), // Spy on the original setter
-        });
-    }
+  // *** Use the more robust cookie clearing ***
+  clearAllCookies();
+  window.localStorage.clear(); // Also clear localStorage before each test
 
-    // *** Use the more robust cookie clearing ***
-    clearAllCookies();
+  document.head.innerHTML = ''; // Clear head
+  document.body.innerHTML = ''; // Clear body
 
-    document.head.innerHTML = ''; // Clear head
-    document.body.innerHTML = ''; // Clear body
+  // Reset Jest's mock function calls
+  jest.clearAllMocks();
 
-    // Reset Jest's mock function calls
-    jest.clearAllMocks();
-
-    // Use fake timers for setTimeout/setInterval control
-    jest.useFakeTimers();
+  // Use fake timers for setTimeout/setInterval control
+  jest.useFakeTimers();
 });
 
 afterEach(() => {
-    // Restore real timers after each test
-    jest.useRealTimers();
+  // Restore real timers after each test
+  jest.useRealTimers();
 });
 
 // Mock Date.now() for consistent timestamps in tests
@@ -68,10 +100,10 @@ global.Date.now = jest.fn(() => MOCK_DATE_NOW);
 
 // --- Helper to simulate adding hidden inputs ---
 global.addHiddenInput = (name, value = '') => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value;
-    document.body.appendChild(input);
-    return input;
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = name;
+  input.value = value;
+  document.body.appendChild(input);
+  return input;
 };

@@ -6,6 +6,26 @@ import { defaultHandlerConfigs } from '../src/config';
 // Helper to get a specific config object by ID (makes tests cleaner)
 const getConfig = (id) => defaultHandlerConfigs.find((c) => c.id === id);
 
+// Helper to set URL search params for a test
+const setUrlParams = (params) => {
+  const url = new URL('http://www.example.com');
+  url.search = params;
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { search: url.search, hostname: 'www.example.com' },
+  });
+};
+
+// Helper to add a hidden input to the DOM
+const addHiddenInput = (name, value = '') => {
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = name;
+  input.value = value;
+  document.body.appendChild(input);
+  return input;
+};
+
 // *** Declare spy variables with let ***
 let setTimeoutSpy;
 let logDebugSpy;
@@ -52,7 +72,7 @@ describe('Core Engine Logic (src/engine.js)', () => {
       value: '?gclid=test-gclid-value-123',
       writable: true,
     });
-    jest.spyOn(utils.URL_PARAMS, 'get').mockImplementation((param) => {
+    jest.spyOn(utils.getUrlParams(), 'get').mockImplementation((param) => {
       if (param === 'gclid') return 'test-gclid-value-123';
       return null;
     });
@@ -93,7 +113,7 @@ describe('Core Engine Logic (src/engine.js)', () => {
       writable: true,
     });
     document.cookie = '_fbc=fb.1.xxxx.cookievalue';
-    jest.spyOn(utils.URL_PARAMS, 'get').mockImplementation((param) => {
+    jest.spyOn(utils.getUrlParams(), 'get').mockImplementation((param) => {
       if (param === 'fbclid') return 'test-fbclid-url-789';
       return null;
     });
@@ -117,7 +137,9 @@ describe('Core Engine Logic (src/engine.js)', () => {
       writable: true,
     });
     document.cookie = '_fbc=fb.1.xxxx.cookievalue999';
-    jest.spyOn(utils.URL_PARAMS, 'get').mockImplementation((_param) => null); // Ensure underscore prefix
+    jest
+      .spyOn(utils.getUrlParams(), 'get')
+      .mockImplementation((_param) => null); // Ensure underscore prefix
 
     init([fbcConfig]);
 
@@ -211,26 +233,20 @@ describe('Core Engine Logic (src/engine.js)', () => {
     );
   });
 
-  test('init skips handler if target input is missing', () => {
-    const gclidConfig = getConfig('gclid');
-    // DON'T add the input: addHiddenInput(gclidConfig.targetInputName);
-    Object.defineProperty(window.location, 'search', {
-      value: '?gclid=test-gclid-value-123',
-      writable: true,
-    });
-    jest
-      .spyOn(utils.URL_PARAMS, 'get')
-      .mockImplementation((_param) => 'test-gclid-value-123'); // Ensure underscore prefix
+  test('init processes handler even if target input is missing (and persists value)', () => {
+    const gclidConfig = { ...getConfig('gclid'), persist: true }; // Add persist for this test
+    // DON'T add the input
+    setUrlParams('?gclid=test-gclid-value-123');
 
-    init();
+    init([gclidConfig]);
 
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining(
-        `Target input '${gclidConfig.targetInputName}' for 'gclid' not found. Skipping.`
-      )
+    // The new logic should NOT log an error in this case, it should proceed gracefully.
+    expect(console.error).not.toHaveBeenCalled();
+    // The key behavior is that the value is still found and persisted.
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      'uph_gclid',
+      'test-gclid-value-123'
     );
-    // Ensure no cookie was set etc.
-    expect(document.cookie).toBe('');
   });
 
   test('init clears input if value not found and no retry (utm_source)', () => {
@@ -240,7 +256,9 @@ describe('Core Engine Logic (src/engine.js)', () => {
       value: '?other=param',
       writable: true,
     });
-    jest.spyOn(utils.URL_PARAMS, 'get').mockImplementation((_param) => null); // Ensure underscore prefix
+    jest
+      .spyOn(utils.getUrlParams(), 'get')
+      .mockImplementation((_param) => null); // Ensure underscore prefix
 
     init([utmConfig]);
     expect(input.value).toBe('');
@@ -258,25 +276,17 @@ describe('Core Engine Logic (src/engine.js)', () => {
       },
     ];
     const input = addHiddenInput('custom-tracker');
-    Object.defineProperty(window.location, 'search', {
-      value: '?trk=xyz987&debug=true',
-      writable: true,
-    }); // *** Add &debug=true ***
-    jest.spyOn(utils.URL_PARAMS, 'get').mockImplementation((_param) => {
-      // Ensure underscore prefix for arg
-      if (_param === 'trk') return 'xyz987'; // <<< Use _param inside the function
-      return null;
-    });
+    setUrlParams('?trk=xyz987&debug=true');
 
     init(customConfig); // Pass the custom config array
 
     expect(input.value).toBe('xyz987');
-    // *** Now this log should be called ***
-    expect(console.log).toHaveBeenCalledWith(
-      '[Unified Param Handler] Using configurations:',
-      customConfig
+    // The log message has changed, so we update the test to reflect the new reality.
+    // We can check for the specific log that indicates custom configs are being used at runtime.
+    expect(logDebugSpy).toHaveBeenCalledWith(
+      'Using customConfigs provided at runtime.'
     );
-    expect(console.log).not.toHaveBeenCalledWith(
+    expect(logDebugSpy).not.toHaveBeenCalledWith(
       expect.stringContaining('Processing Handler: gclid')
     );
   });
@@ -300,7 +310,9 @@ describe('Core Engine Logic (src/engine.js)', () => {
       value: '?valid=abc',
       writable: true,
     });
-    jest.spyOn(utils.URL_PARAMS, 'get').mockImplementation((_param) => 'abc'); // Ensure underscore prefix
+    jest
+      .spyOn(utils.getUrlParams(), 'get')
+      .mockImplementation((_param) => 'abc'); // Ensure underscore prefix
 
     init(invalidConfig);
 
@@ -372,5 +384,98 @@ describe('Core Engine Logic (src/engine.js)', () => {
 
     // Restore original fetch
     global.fetch = originalFetch;
+  });
+
+  // --- Persistence Tests ---
+
+  describe('Persistence Logic', () => {
+    const utmSourceConfig = { ...getConfig('utm_source'), persist: true }; // Ensure persist is true
+    const utmMediumConfig = { ...getConfig('utm_medium'), persist: false }; // Ensure persist is false
+
+    beforeEach(() => {
+      // Ensure localStorage is clear and spies are reset for each persistence test
+      window.localStorage.clear();
+      // Crucially, clear mocks *after* any setup but *before* the test runs.
+      jest.clearAllMocks();
+    });
+
+    test('Test Case 1: Saves value to localStorage on URL hit when persist is true', () => {
+      setUrlParams('?utm_source=google');
+      const input = addHiddenInput(utmSourceConfig.targetInputName);
+
+      init([utmSourceConfig]);
+
+      expect(input.value).toBe('google');
+      expect(localStorage.setItem).toHaveBeenCalledTimes(1);
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'uph_utm_source',
+        'google'
+      );
+    });
+
+    test('Test Case 2: Retrieves value from localStorage if not in URL', () => {
+      // Step 1: Prime localStorage
+      window.localStorage.setItem('uph_utm_source', 'facebook');
+      // Crucially, clear mocks AFTER priming and BEFORE running the code under test.
+      jest.clearAllMocks();
+
+      // Step 2: Load page without URL params and without the cookie
+      setUrlParams('');
+      document.cookie = ''; // Ensure no relevant cookies exist
+
+      const input = addHiddenInput(utmSourceConfig.targetInputName);
+
+      init([utmSourceConfig]);
+
+      expect(localStorage.getItem).toHaveBeenCalledWith('uph_utm_source');
+      expect(input.value).toBe('facebook');
+      // Should not save again as it wasn't a "fresh" find from the URL
+      expect(localStorage.setItem).not.toHaveBeenCalled();
+    });
+
+    test('Test Case 3: Updates localStorage with new URL value', () => {
+      // Step 1: Prime localStorage with an old value
+      window.localStorage.setItem('uph_utm_source', 'google');
+      // Crucially, clear mocks AFTER priming and BEFORE running the code under test.
+      jest.clearAllMocks();
+
+      // Step 2: Load page with a new URL param
+      setUrlParams('?utm_source=bing');
+      const input = addHiddenInput(utmSourceConfig.targetInputName);
+
+      init([utmSourceConfig]);
+
+      expect(input.value).toBe('bing');
+      // Check that it overwrites the old value
+      expect(localStorage.setItem).toHaveBeenCalledTimes(1);
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'uph_utm_source',
+        'bing'
+      );
+    });
+
+    test('Test Case 4: Does not save to localStorage when persist is false', () => {
+      setUrlParams('?utm_medium=cpc');
+      const input = addHiddenInput(utmMediumConfig.targetInputName);
+
+      init([utmMediumConfig]);
+
+      expect(input.value).toBe('cpc');
+      expect(localStorage.setItem).not.toHaveBeenCalled();
+    });
+
+    test('Persists value even if input field is not on the page', () => {
+      setUrlParams('?utm_source=twitter');
+      // Do NOT add the hidden input to the DOM
+
+      init([utmSourceConfig]);
+
+      // The key is that it saves the value, even without an input to put it in
+      expect(localStorage.setItem).toHaveBeenCalledTimes(1);
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'uph_utm_source',
+        'twitter'
+      );
+    });
   });
 });

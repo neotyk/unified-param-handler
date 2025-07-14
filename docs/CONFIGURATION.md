@@ -42,6 +42,11 @@ Each object in the configuration array defines a handler and can have the follow
     *   **`enabledOnUrlHit`**: (boolean) If `true` and the value was sourced from a URL parameter (`sourceType` included `'url'`), a cookie will be set/updated. Defaults to `false`.
     *   **`cookieNameToSet`**: (string, Required if `setCookie` is defined) The name of the cookie to create or update. Can be the same as `cookieName` or different.
     *   **`daysToExpiry`**: (number, Required if `setCookie` is defined) The lifespan of the cookie in days.
+    *   **`persist`**: (boolean, Optional)
+        *   If `true`, the handler will save its value to `localStorage` when a "fresh" value is found in the URL.
+        *   On subsequent page loads where the value is not found in the URL or a cookie, the handler will retrieve the value from `localStorage`.
+        *   This is ideal for capturing attribution parameters (like UTMs) on a landing page and having them available on other pages (like a contact or checkout page) that the user navigates to later.
+        *   Defaults to `false`.
 *   **`retryMechanism`**: (object, Optional, only applies if `sourceType` includes `'cookie'`)
     *   Configuration for retrying the cookie read if the cookie is not found on the initial attempt. This is useful for cookies that might be set asynchronously by other scripts (like analytics platforms).
     *   **`enabled`**: (boolean) Set to `true` to enable the retry mechanism. Defaults to `false`.

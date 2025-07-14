@@ -1,10 +1,12 @@
 // src/utils.js
 
 /**
- * Parsed URL query parameters.
- * @type {URLSearchParams}
+ * Returns a new URLSearchParams object based on the current window.location.search.
+ * @returns {URLSearchParams}
  */
-export const URL_PARAMS = new URLSearchParams(window.location.search);
+export function getUrlParams() {
+  return new URLSearchParams(window.location.search);
+}
 
 /**
  * Checks if the debug mode is enabled via the 'debug=true' URL parameter.
@@ -158,4 +160,47 @@ export function formatFbClickId(fbclid) {
   const subdomainIndex = getSubdomainIndex();
   const creationTime = Date.now();
   return `fb.${subdomainIndex}.${creationTime}.${fbclid}`;
+}
+
+// --- Persistence Utilities ---
+
+const PERSISTENCE_PREFIX = 'uph_'; // Namespace for localStorage keys
+
+/**
+ * Saves a value to localStorage, prefixed with a namespace.
+ * @param {string} key - The key to save the value under (will be namespaced).
+ * @param {string} value - The value to save.
+ */
+export function saveToPersistentStorage(key, value) {
+  try {
+    const namespacedKey = PERSISTENCE_PREFIX + key;
+    localStorage.setItem(namespacedKey, value);
+    logDebug(
+      `Persisted value for key '${key}' (namespaced as '${namespacedKey}').`
+    );
+  } catch (e) {
+    logError(`Failed to save to localStorage: ${e.message}`);
+  }
+}
+
+/**
+ * Retrieves a value from localStorage.
+ * @param {string} key - The key to retrieve the value for (will be namespaced).
+ * @returns {string|null} The retrieved value, or null if not found or on error.
+ */
+export function getFromPersistentStorage(key) {
+  try {
+    const namespacedKey = PERSISTENCE_PREFIX + key;
+    const value = localStorage.getItem(namespacedKey);
+    if (value !== null) {
+      logDebug(
+        `Retrieved persisted value for key '${key}' (from '${namespacedKey}'):`,
+        value
+      );
+    }
+    return value;
+  } catch (e) {
+    logError(`Failed to read from localStorage: ${e.message}`);
+    return null;
+  }
 }

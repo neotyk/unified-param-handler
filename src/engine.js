@@ -83,149 +83,144 @@ function waitForCookieAndUpdateInput(
 
 /**
  * Processes a single handler configuration.
- * It attempts to find the specified value from the configured source (URL or cookie),
- * applies formatting if necessary, updates the target input field, sets a cookie if configured,
- * and initiates the retry mechanism if the value is not found initially but retry is enabled.
+ * This function is now focused on finding the final value for a handler
+ * and updating the input field if it exists on the page.
  *
  * @param {HandlerConfig} config - A single handler configuration object.
- * @param {HTMLInputElement} inputElement - The corresponding target input DOM element.
  */
-function processHandler(config, inputElement) {
+function processHandler(config) {
   utils.startGroup(`Processing Handler: ${config.id}`, true);
 
-  if (!inputElement) {
-    utils.logError(
-      `Target input field '${config.targetInputName}' for handler '${config.id}' not found. Skipping.`
-    );
-    utils.endGroup();
-    return; // Cannot proceed without the target input
-  }
+  // --- 1. Find a fresh value from URL or Cookie ---
+  let freshValue = null;
+  let valueSource = null;
 
-  let rawValue = null;
-  let valueSource = null; // 'url' or 'cookie'
-
-  // 1. Check URL Source
   if (config.sourceType.includes('url') && config.urlParamName) {
-    rawValue = utils.URL_PARAMS.get(config.urlParamName);
-    if (rawValue !== null) {
+    const urlVal = utils.getUrlParams().get(config.urlParamName);
+    if (urlVal !== null) {
+      freshValue = urlVal;
       valueSource = 'url';
-      utils.logDebug(
-        `Found raw value for '${config.id}' in URL ('${config.urlParamName}'):`,
-        rawValue
-      );
     }
   }
 
-  // 2. Check Cookie Source (if not found in URL or if source is only cookie)
   if (
-    rawValue === null &&
+    freshValue === null &&
     config.sourceType.includes('cookie') &&
     config.cookieName
   ) {
-    rawValue = utils.getCookie(config.cookieName); // Gets fresh cookies
-    if (rawValue !== null) {
+    const cookieVal = utils.getCookie(config.cookieName);
+    if (cookieVal !== null) {
+      freshValue = cookieVal;
       valueSource = 'cookie';
-      utils.logDebug(
-        `Found raw value for '${config.id}' in Cookie ('${config.cookieName}'):`,
-        rawValue
-      );
     }
   }
 
-  // 3. Process Found Value (or handle not found)
-  if (rawValue !== null) {
-    let finalValue = rawValue; // Initialize finalValue with the raw value
-    let formatterFunction = null;
+  // --- 2. If a fresh value was found from the URL, format and persist it ---
+  if (valueSource === 'url') {
+    utils.logDebug(
+      `Found fresh value for '${config.id}' from URL:`,
+      freshValue
+    );
+    let valueToPersist = freshValue;
 
-    // Determine the formatter function
+    // Apply formatting
+    let formatterFunction = null;
     if (typeof config.applyFormatting === 'function') {
       formatterFunction = config.applyFormatting;
     } else if (typeof config.applyFormatting === 'string') {
       formatterFunction = knownFormatters[config.applyFormatting];
-      if (!formatterFunction) {
+    }
+    if (formatterFunction) {
+      try {
+        const formatted = formatterFunction(freshValue);
+        if (formatted !== null && formatted !== undefined) {
+          valueToPersist = formatted;
+          utils.logDebug(`Formatted value for '${config.id}':`, valueToPersist);
+        }
+      } catch (e) {
         utils.logError(
-          `Unknown formatter string '${config.applyFormatting}' for handler '${config.id}'.`
+          `Error applying formatting function for handler '${config.id}': ${e.message}.`
         );
       }
     }
 
-    // 3a. Apply Formatting ONLY if source was URL and formatter function is valid
-    if (valueSource === 'url' && typeof formatterFunction === 'function') {
-      utils.logDebug(
-        `Attempting formatting for '${config.id}' as source was URL.`
-      );
-      try {
-        const formatted = formatterFunction(rawValue);
-        if (formatted !== null && formatted !== undefined) {
-          finalValue = formatted;
-          utils.logDebug(`Formatted value for '${config.id}':`, finalValue);
-        } else {
-          utils.logDebug(
-            `Formatting function for '${config.id}' returned null/undefined. Using raw value.`
-          );
-        }
-      } catch (formatError) {
-        utils.logError(
-          `Error applying formatting function for handler '${config.id}': ${formatError.message}. Using raw value.`
-        );
-      }
-    } // If valueSource was 'cookie', finalValue remains the rawValue
-
-    // 3b. Update Input Field
-    inputElement.value = finalValue; // Use the correctly determined finalValue
-    utils.logDebug(
-      `Input field '${config.targetInputName}' updated for '${config.id}'. Value Source: ${valueSource}. Final Value:`,
-      finalValue
-    );
-
-    // 3c. Set Cookie (Only if source was URL)
-    if (
-      valueSource === 'url' &&
-      config.setCookie &&
-      config.setCookie.enabledOnUrlHit
-    ) {
+    // Persist if configured
+    if (config.persist) {
+      utils.saveToPersistentStorage(config.id, valueToPersist);
+    }
+    // Set cookie if configured
+    if (config.setCookie && config.setCookie.enabledOnUrlHit) {
       utils.setCookie(
         config.setCookie.cookieNameToSet,
-        finalValue, // Use the potentially formatted value from URL hit
+        valueToPersist,
         config.setCookie.daysToExpiry
       );
     }
-  } else {
-    // 4. Value Not Found - Initiate Retry or Clear Input
+    // The fresh, formatted, persisted value is the one we'll use for the input
+    freshValue = valueToPersist;
+  } else if (valueSource === 'cookie') {
     utils.logDebug(
-      `No initial value found for '${config.id}' from configured sources (${config.sourceType}).`
+      `Found fresh value for '${config.id}' from Cookie:`,
+      freshValue
     );
-
-    // *** Clear the input field *before* deciding whether to retry ***
-    // This ensures the input is empty if the value isn't found immediately.
-    if (inputElement.value !== '') {
-      inputElement.value = '';
-      utils.logDebug(
-        `Cleared input field '${config.targetInputName}' for '${config.id}' as value not found initially.`
-      );
-    } else {
-      utils.logDebug(
-        `Input field '${config.targetInputName}' for '${config.id}' was already empty.`
-      );
-    }
-
-    if (
-      config.sourceType.includes('cookie') &&
-      config.retryMechanism &&
-      config.retryMechanism.enabled
-    ) {
-      // Initiate retry only if cookie was a potential source and retry is enabled
-      waitForCookieAndUpdateInput(
-        config.cookieName,
-        inputElement,
-        config.retryMechanism,
-        1 // Start counting attempts from 1 for retry
-      );
-    }
-    // No need for an 'else' here to clear the input again, it was done above.
   }
 
-  utils.endGroup(); // End processing group for this handler
+  // --- 3. Determine the final value for the input field ---
+  let finalValue = freshValue; // Start with the fresh value (which could be null)
+  if (finalValue === null && config.persist) {
+    const persistedValue = utils.getFromPersistentStorage(config.id);
+    if (persistedValue !== null) {
+      finalValue = persistedValue;
+      valueSource = 'storage'; // Update source for logging
+      utils.logDebug(`Using persisted value for '${config.id}':`, finalValue);
+    }
+  }
+
+  // --- 4. Update Input Field (if it exists) ---
+  if (config.targetInputName) {
+    const inputElement = document.querySelector(
+      `input[name="${config.targetInputName}"]`
+    );
+    if (inputElement) {
+      if (finalValue !== null) {
+        inputElement.value = finalValue;
+        utils.logDebug(
+          `Input field '${config.targetInputName}' updated. Source: ${
+            valueSource || 'none'
+          }.`
+        );
+      } else {
+        inputElement.value = '';
+        utils.logDebug(
+          `No value found for '${config.id}', cleared input field '${config.targetInputName}'.`
+        );
+      }
+      // Handle cookie retry only if no value could be found from any source
+      if (
+        finalValue === null &&
+        config.sourceType.includes('cookie') &&
+        config.retryMechanism &&
+        config.retryMechanism.enabled
+      ) {
+        waitForCookieAndUpdateInput(
+          config.cookieName,
+          inputElement,
+          config.retryMechanism,
+          1
+        );
+      }
+    } else {
+      utils.logDebug(
+        `Input field '${config.targetInputName}' not found on this page.`
+      );
+    }
+  } else if (freshValue === null) {
+    utils.logDebug(
+      `No value found for '${config.id}' and no targetInputName specified.`
+    );
+  }
+
+  utils.endGroup();
 }
 
 /**
@@ -262,11 +257,6 @@ function fetchClientIpAndUpdateInput(inputElement, targetInputName) {
 
 /**
  * Initializes the Unified Parameter Handler.
- * Selects the configuration (default or custom), finds target input fields,
- * and processes each handler configuration.
- * Handles special cases like 'userAgent' and 'ip_address' directly.
- *
- * @param {HandlerConfig[]} [customConfigs] - Optional array of custom handler configurations. If not provided or invalid, uses `defaultHandlerConfigs`.
  */
 export function init(customConfigs) {
   // customConfigs argument is from runtime
@@ -373,11 +363,8 @@ export function init(customConfigs) {
       !config ||
       typeof config !== 'object' ||
       !config.id ||
-      !config.sourceType || // sourceType is now required for all standard types
-      !config.targetInputName
+      !config.sourceType
     ) {
-      // Allow specific validation bypass only for known special types if needed
-      // but generally enforce structure
       utils.logError(
         `Invalid or incomplete handler config: ${JSON.stringify(
           config
@@ -386,40 +373,39 @@ export function init(customConfigs) {
       return;
     }
 
-    const inputElement = document.querySelector(
-      `input[name="${config.targetInputName}"]`
-    );
-    if (!inputElement) {
-      utils.logError(
-        `Target input '${config.targetInputName}' for '${config.id}' not found. Skipping.`
-      );
-      return;
-    }
-
     try {
       switch (config.sourceType) {
         case 'user_agent':
-          if (typeof navigator !== 'undefined' && navigator.userAgent) {
-            // Explicitly get the value before assigning
-            const userAgentValue = navigator.userAgent;
-            inputElement.value = userAgentValue;
-            utils.logDebug(
-              `Input field '${config.targetInputName}' updated with User Agent.`
-            );
-          } else {
-            utils.logError(
-              'Cannot retrieve User Agent: navigator.userAgent is not available.'
-            );
-          }
-          break;
         case 'ip_address':
-          fetchClientIpAndUpdateInput(inputElement, config.targetInputName);
+          // These require a target input, so we handle them simply.
+          if (config.targetInputName) {
+            const inputElement = document.querySelector(
+              `input[name="${config.targetInputName}"]`
+            );
+            if (inputElement) {
+              if (
+                config.sourceType === 'user_agent' &&
+                typeof navigator !== 'undefined' &&
+                navigator.userAgent
+              ) {
+                inputElement.value = navigator.userAgent;
+                utils.logDebug(
+                  `Input field '${config.targetInputName}' updated with User Agent.`
+                );
+              } else if (config.sourceType === 'ip_address') {
+                fetchClientIpAndUpdateInput(
+                  inputElement,
+                  config.targetInputName
+                );
+              }
+            }
+          }
           break;
         case 'url':
         case 'cookie':
         case 'url_or_cookie':
-          // Process standard handlers
-          processHandler(config, inputElement);
+          // Process standard handlers for value finding, persistence, and field updates.
+          processHandler(config);
           break;
         default:
           utils.logError(
@@ -430,7 +416,7 @@ export function init(customConfigs) {
       utils.logError(
         `Unexpected error processing handler '${config.id}': ${error.message}`
       );
-      console.error(error); // Log full stack trace
+      console.error(error);
     }
   });
 

@@ -18,6 +18,7 @@ import { formatFbClickId } from './utils.js';
  * @property {boolean} [setCookie.enabledOnUrlHit] - Set the cookie if the value was found in the URL?
  * @property {string} [setCookie.cookieNameToSet] - The name of the cookie to set/update.
  * @property {number} [setCookie.daysToExpiry] - Lifespan of the cookie in days.
+ * @property {boolean} [persist] - If true, the found value will be saved to localStorage and retrieved on subsequent page loads if not found in the URL/cookie.
  * @property {object} [retryMechanism] - Optional configuration for retrying cookie reads. Only applies if sourceType includes 'cookie'.
  * @property {boolean} [retryMechanism.enabled] - Enable retry if cookie not found initially?
  * @property {number} [retryMechanism.maxAttempts] - Maximum number of retry attempts.
@@ -102,54 +103,63 @@ export const defaultHandlerConfigs = [
     sourceType: 'url',
     urlParamName: 'utm_source',
     targetInputName: 'custom UTM_SOURCE',
+    persist: true,
   },
   {
     id: 'utm_medium',
     sourceType: 'url',
     urlParamName: 'utm_medium',
     targetInputName: 'custom UTM_MEDIUM',
+    persist: true,
   },
   {
     id: 'utm_campaign',
     sourceType: 'url',
     urlParamName: 'utm_campaign',
     targetInputName: 'custom UTM_CAMPAIGN',
+    persist: true,
   },
   {
     id: 'utm_term',
     sourceType: 'url',
     urlParamName: 'utm_term',
     targetInputName: 'custom UTM_TERM',
+    persist: true,
   },
   {
     id: 'utm_content',
     sourceType: 'url',
     urlParamName: 'utm_content',
     targetInputName: 'custom UTM_CONTENT',
+    persist: true,
   },
   {
     id: 'utm_id',
     sourceType: 'url',
     urlParamName: 'utm_id',
     targetInputName: 'custom UTM_ID',
+    persist: true,
   },
   {
     id: 'utm_pub',
     sourceType: 'url',
     urlParamName: 'utm_pub',
     targetInputName: 'custom UTM_PUB',
+    persist: true,
   },
   {
     id: 'utm_size',
     sourceType: 'url',
     urlParamName: 'utm_size',
     targetInputName: 'custom UTM_SIZE',
+    persist: true,
   },
   {
     id: 'utm_broker',
     sourceType: 'url',
     urlParamName: 'utm_broker',
     targetInputName: 'custom UTM_BROKER',
+    persist: true,
   },
   // Add more UTMs or other parameters here following the pattern
 

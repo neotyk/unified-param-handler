@@ -8,7 +8,8 @@ This library helps ensure that tracking parameters captured on landing pages are
 
 *   Reads specified URL query parameters.
 *   Reads specified browser cookies.
-*   Supports looking in URL first, then falling back to cookies.
+*   **Persists values** (like UTMs) in `localStorage` to retain them across page navigations.
+*   Supports looking in URL first, then falling back to cookies, then to persisted storage.
 *   Sets/updates cookies based on found URL parameters (configurable expiry).
 *   Populates hidden HTML input fields with the found values.
 *   Handles asynchronous cookie setting with configurable retries.
