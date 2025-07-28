@@ -15,18 +15,18 @@ const knownFormatters = {
 };
 
 /**
- * Waits for a specific cookie to appear and updates the target input field if found.
+ * Waits for a specific cookie to appear and updates the target element if found.
  * This function implements a retry mechanism with configurable attempts and interval.
  * It's invoked only when an initial cookie check fails and the handler configuration enables retry.
  *
  * @param {string} cookieName - The name of the cookie to wait for.
- * @param {HTMLInputElement} inputElement - The DOM element of the target hidden input field.
+ * @param {HTMLInputElement|HTMLTextAreaElement} element - The DOM element to update.
  * @param {HandlerConfig['retryMechanism']} retryConfig - The retry configuration object from the handler config.
  * @param {number} [initialAttemptCount=1] - The starting attempt number for logging purposes.
  */
 function waitForCookieAndUpdateInput(
   cookieName,
-  inputElement,
+  element, // Changed from inputElement to element
   retryConfig,
   initialAttemptCount = 1
 ) {
@@ -40,31 +40,27 @@ function waitForCookieAndUpdateInput(
       true
     );
 
-    const cookieValue = utils.getCookie(cookieName); // Get fresh cookies
+    const cookieValue = utils.getCookie(cookieName);
 
     if (cookieValue) {
-      // --- Cookie Found on Retry ---
-      inputElement.value = cookieValue;
+      element.value = cookieValue; // Use element
       utils.logDebug(
-        `Input field '${inputElement.name}' updated from RETRIED cookie '${cookieName}':`,
+        `Element '[name="${element.name}"]' updated from RETRIED cookie '${cookieName}':`, // Updated log
         cookieValue
       );
       utils.endGroup();
-      return; // Success: Stop retrying.
+      return;
     }
 
-    // --- Cookie Not Found ---
     attempts++;
     if (attempts > maxAttempts) {
-      // --- Max Attempts Reached ---
       utils.logError(
-        `Failed to find ${cookieName} cookie after ${maxAttempts} total attempts. Input field '${inputElement.name}' might remain empty or unchanged.`
+        `Failed to find ${cookieName} cookie after ${maxAttempts} total attempts. Element '[name="${element.name}"]' might remain empty or unchanged.` // Updated log
       );
       utils.endGroup();
-      return; // Failure: Stop retrying.
+      return;
     }
 
-    // --- Schedule Next Attempt ---
     utils.logDebug(
       `Cookie ${cookieName} still not found. Will retry again in ${
         interval / 1000
@@ -74,7 +70,6 @@ function waitForCookieAndUpdateInput(
     utils.endGroup();
   }
 
-  // Start the first retry check (via setTimeout)
   utils.logDebug(
     `Cookie ${cookieName} not found initially. Starting retry checks (Attempt ${attempts}).`
   );
@@ -178,40 +173,43 @@ function processHandler(config) {
 
   // --- 4. Update Input Field (if it exists) ---
   if (config.targetInputName) {
-    const inputElement = document.querySelector(
-      `input[name="${config.targetInputName}"]`
+    const targetElements = document.querySelectorAll(
+      `input[name="${config.targetInputName}"], textarea[name="${config.targetInputName}"]`
     );
-    if (inputElement) {
-      if (finalValue !== null) {
-        inputElement.value = finalValue;
-        utils.logDebug(
-          `Input field '${config.targetInputName}' updated. Source: ${
-            valueSource || 'none'
-          }.`
-        );
-      } else {
-        inputElement.value = '';
-        utils.logDebug(
-          `No value found for '${config.id}', cleared input field '${config.targetInputName}'.`
-        );
-      }
-      // Handle cookie retry only if no value could be found from any source
-      if (
-        finalValue === null &&
-        config.sourceType.includes('cookie') &&
-        config.retryMechanism &&
-        config.retryMechanism.enabled
-      ) {
-        waitForCookieAndUpdateInput(
-          config.cookieName,
-          inputElement,
-          config.retryMechanism,
-          1
-        );
-      }
+
+    if (targetElements.length > 0) {
+      targetElements.forEach((element) => {
+        if (finalValue !== null) {
+          element.value = finalValue;
+          utils.logDebug(
+            `Element '[name="${config.targetInputName}"]' updated. Source: ${
+              valueSource || 'none'
+            }.`
+          );
+        } else {
+          element.value = '';
+          utils.logDebug(
+            `No value found for '${config.id}', cleared element '[name="${config.targetInputName}"]'.`
+          );
+        }
+        // Handle cookie retry only if no value could be found from any source
+        if (
+          finalValue === null &&
+          config.sourceType.includes('cookie') &&
+          config.retryMechanism &&
+          config.retryMechanism.enabled
+        ) {
+          waitForCookieAndUpdateInput(
+            config.cookieName,
+            element, // Pass the specific element to the retry function
+            config.retryMechanism,
+            1
+          );
+        }
+      });
     } else {
       utils.logDebug(
-        `Input field '${config.targetInputName}' not found on this page.`
+        `No elements found with name '${config.targetInputName}' on this page.`
       );
     }
   } else if (freshValue === null) {
@@ -224,34 +222,50 @@ function processHandler(config) {
 }
 
 /**
- * Fetches the client's IP address from an external service and updates the target input field.
+ * Fetches the client's IP address from an external service and updates the target element.
+ * Includes a timeout to prevent race conditions.
  * @private
- * @param {HTMLInputElement} inputElement The input field to update with the IP address.
- * @param {string} targetInputName The name attribute of the input field (for logging).
+ * @param {HTMLInputElement|HTMLTextAreaElement} element - The element to update with the IP address.
+ * @param {string} targetInputName - The name attribute of the element (for logging).
  */
-function fetchClientIpAndUpdateInput(inputElement, targetInputName) {
-  utils.logDebug(`Fetching Client IP for input '${targetInputName}'...`);
-  fetch('https://checkip.amazonaws.com/') // Simple public service
+function fetchClientIpAndUpdateInput(element, targetInputName) {
+  // Changed from inputElement to element
+  utils.logDebug(
+    `Fetching Client IP for element '[name="${targetInputName}"]'...`
+  ); // Updated log
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+  fetch('https://checkip.amazonaws.com/', { signal: controller.signal })
     .then((res) => {
+      clearTimeout(timeoutId);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       return res.text();
     })
     .then((ip) => {
-      const trimmedIp = ip.trim(); // Trim whitespace
-      inputElement.value = trimmedIp;
+      const trimmedIp = ip.trim();
+      element.value = trimmedIp; // Use element
       utils.logDebug(
-        `Input field '${targetInputName}' updated with Client IP:`,
+        `Element '[name="${targetInputName}"]' updated with Client IP:`, // Updated log
         trimmedIp
       );
     })
     .catch((error) => {
-      utils.logError(
-        `Failed to fetch Client IP for '${targetInputName}': ${error.message}`
-      );
-      // Optionally clear the input or leave it as is
-      // inputElement.value = '';
+      clearTimeout(timeoutId);
+      let errorMessage;
+      if (error.name === 'AbortError') {
+        errorMessage = 'IP_FETCH_TIMED_OUT';
+        utils.logError(`IP fetch for '[name="${targetInputName}"]' timed out.`);
+      } else {
+        errorMessage = 'IP_FETCH_FAILED';
+        utils.logError(
+          `Failed to fetch Client IP for '[name="${targetInputName}"]': ${error.message}`
+        );
+      }
+      element.value = errorMessage; // Use element
     });
 }
 
@@ -262,8 +276,8 @@ export function init(customConfigs) {
   // customConfigs argument is from runtime
   utils.startGroup('Initializing Unified Parameter Handler');
 
+  // --- Configuration Loading (No changes needed here, it's correct) ---
   let baseConfigs;
-
   if (
     typeof WEBPACK_BUILD_HAS_FIXED_CONFIG !== 'undefined' &&
     WEBPACK_BUILD_HAS_FIXED_CONFIG
@@ -271,11 +285,8 @@ export function init(customConfigs) {
     utils.logDebug('Build has a fixed configuration.');
     if (
       typeof WEBPACK_CUSTOM_CONFIGS !== 'undefined' &&
-      WEBPACK_CUSTOM_CONFIGS // Check if it's not null/undefined
+      WEBPACK_CUSTOM_CONFIGS
     ) {
-      // If customConfigPath was used, WEBPACK_CUSTOM_CONFIGS is the content of that file.
-      // It might be an object { default: [...] } if the custom config uses export default,
-      // or a direct array if it uses module.exports = [...].
       if (Array.isArray(WEBPACK_CUSTOM_CONFIGS)) {
         baseConfigs = WEBPACK_CUSTOM_CONFIGS;
       } else if (
@@ -287,7 +298,7 @@ export function init(customConfigs) {
         utils.logError(
           'WEBPACK_CUSTOM_CONFIGS is not a valid array or an object with a default array property.'
         );
-        baseConfigs = []; // Fallback to empty if structure is unexpected
+        baseConfigs = [];
       }
       utils.logDebug(
         'Using WEBPACK_CUSTOM_CONFIGS provided at build time.',
@@ -305,7 +316,6 @@ export function init(customConfigs) {
       );
     }
   } else {
-    // Standard behavior: runtime customConfigs take precedence over defaults
     utils.logDebug(
       'Build does not have a fixed configuration. Runtime configs can be used.'
     );
@@ -319,13 +329,10 @@ export function init(customConfigs) {
   }
 
   let configsToUse = baseConfigs;
-
-  // Filter if WEBPACK_CONFIG_NAME is set (applies to both fixed and non-fixed config builds)
   if (typeof WEBPACK_CONFIG_NAME !== 'undefined' && WEBPACK_CONFIG_NAME) {
     utils.logDebug(
       `Webpack build specified configName to filter: ${WEBPACK_CONFIG_NAME}`
     );
-    // Ensure baseConfigs is an array before trying to find
     if (Array.isArray(baseConfigs)) {
       const singleConfig = baseConfigs.find(
         (c) => c.id === WEBPACK_CONFIG_NAME
@@ -345,7 +352,7 @@ export function init(customConfigs) {
       utils.logError(
         'Base configurations are not an array, cannot filter by WEBPACK_CONFIG_NAME.'
       );
-      configsToUse = []; // Or handle as an error appropriately
+      configsToUse = [];
     }
   }
 
@@ -357,8 +364,8 @@ export function init(customConfigs) {
     return;
   }
 
+  // --- Handler Processing Loop (This is the refactored part) ---
   configsToUse.forEach((config) => {
-    // Basic validation
     if (
       !config ||
       typeof config !== 'object' ||
@@ -374,43 +381,55 @@ export function init(customConfigs) {
     }
 
     try {
-      switch (config.sourceType) {
-        case 'user_agent':
-        case 'ip_address':
-          // These require a target input, so we handle them simply.
-          if (config.targetInputName) {
-            const inputElement = document.querySelector(
-              `input[name="${config.targetInputName}"]`
-            );
-            if (inputElement) {
-              if (
-                config.sourceType === 'user_agent' &&
-                typeof navigator !== 'undefined' &&
-                navigator.userAgent
-              ) {
-                inputElement.value = navigator.userAgent;
-                utils.logDebug(
-                  `Input field '${config.targetInputName}' updated with User Agent.`
-                );
-              } else if (config.sourceType === 'ip_address') {
-                fetchClientIpAndUpdateInput(
-                  inputElement,
-                  config.targetInputName
-                );
-              }
-            }
-          }
-          break;
-        case 'url':
-        case 'cookie':
-        case 'url_or_cookie':
-          // Process standard handlers for value finding, persistence, and field updates.
-          processHandler(config);
-          break;
-        default:
+      // Handle special, direct-injection types first
+      if (
+        config.sourceType === 'user_agent' ||
+        config.sourceType === 'ip_address'
+      ) {
+        if (!config.targetInputName) {
           utils.logError(
-            `Unknown sourceType '${config.sourceType}' for handler '${config.id}'. Skipping.`
+            `Handler '${config.id}' requires a targetInputName. Skipping.`
           );
+          return; // Use 'return' since we're inside a forEach
+        }
+        const targetElements = document.querySelectorAll(
+          `input[name="${config.targetInputName}"], textarea[name="${config.targetInputName}"]`
+        );
+        if (targetElements.length === 0) {
+          utils.logDebug(
+            `No elements found with name '${config.targetInputName}' for handler '${config.id}'.`
+          );
+          return;
+        }
+
+        targetElements.forEach((element) => {
+          // Now, apply the specific logic to each found element
+          if (config.sourceType === 'user_agent') {
+            if (typeof navigator !== 'undefined' && navigator.userAgent) {
+              element.value = navigator.userAgent;
+              utils.logDebug(
+                `Element '[name="${config.targetInputName}"]' updated with User Agent.`
+              );
+            } else {
+              element.value = 'USER_AGENT_NOT_FOUND'; // Sentinel value
+              utils.logError(
+                `navigator.userAgent not available for element '[name="${config.targetInputName}"]'.`
+              );
+            }
+          } else if (config.sourceType === 'ip_address') {
+            fetchClientIpAndUpdateInput(element, config.targetInputName);
+          }
+        });
+      }
+      // Handle URL/Cookie/Storage types
+      else if (['url', 'cookie', 'url_or_cookie'].includes(config.sourceType)) {
+        processHandler(config);
+      }
+      // Handle unknown types
+      else {
+        utils.logError(
+          `Unknown sourceType '${config.sourceType}' for handler '${config.id}'. Skipping.`
+        );
       }
     } catch (error) {
       utils.logError(
