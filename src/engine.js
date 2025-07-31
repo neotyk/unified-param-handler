@@ -26,7 +26,7 @@ const knownFormatters = {
  */
 function waitForCookieAndUpdateInput(
   cookieName,
-  element, // Changed from inputElement to element
+  element,
   retryConfig,
   initialAttemptCount = 1
 ) {
@@ -43,9 +43,9 @@ function waitForCookieAndUpdateInput(
     const cookieValue = utils.getCookie(cookieName);
 
     if (cookieValue) {
-      element.value = cookieValue; // Use element
+      element.value = cookieValue;
       utils.logDebug(
-        `Element '[name="${element.name}"]' updated from RETRIED cookie '${cookieName}':`, // Updated log
+        `Element '[name="${element.name}"]' updated from RETRIED cookie '${cookieName}':`,
         cookieValue
       );
       utils.endGroup();
@@ -55,7 +55,7 @@ function waitForCookieAndUpdateInput(
     attempts++;
     if (attempts > maxAttempts) {
       utils.logError(
-        `Failed to find ${cookieName} cookie after ${maxAttempts} total attempts. Element '[name="${element.name}"]' might remain empty or unchanged.` // Updated log
+        `Failed to find ${cookieName} cookie after ${maxAttempts} total attempts. Element '[name="${element.name}"]' might remain empty or unchanged.`
       );
       utils.endGroup();
       return;
@@ -92,10 +92,18 @@ function processHandler(config) {
 
   if (config.sourceType.includes('url') && config.urlParamName) {
     const urlVal = utils.getUrlParams().get(config.urlParamName);
-    if (urlVal !== null) {
+
+    // MODIFICATION START: Only accept the URL value if it's not null AND not an empty string.
+    if (urlVal) {
       freshValue = urlVal;
       valueSource = 'url';
+    } else if (urlVal === '') {
+      // Explicitly log when we ignore an empty param from the URL
+      utils.logDebug(
+        `Ignoring empty value from URL param '${config.urlParamName}'. Will check other sources.`
+      );
     }
+    // MODIFICATION END
   }
 
   if (
@@ -104,7 +112,8 @@ function processHandler(config) {
     config.cookieName
   ) {
     const cookieVal = utils.getCookie(config.cookieName);
-    if (cookieVal !== null) {
+    // Also check for empty cookie values, just in case
+    if (cookieVal) {
       freshValue = cookieVal;
       valueSource = 'cookie';
     }
@@ -164,7 +173,8 @@ function processHandler(config) {
   let finalValue = freshValue; // Start with the fresh value (which could be null)
   if (finalValue === null && config.persist) {
     const persistedValue = utils.getFromPersistentStorage(config.id);
-    if (persistedValue !== null) {
+    if (persistedValue) {
+      // Also check for empty persisted value
       finalValue = persistedValue;
       valueSource = 'storage'; // Update source for logging
       utils.logDebug(`Using persisted value for '${config.id}':`, finalValue);
@@ -229,10 +239,9 @@ function processHandler(config) {
  * @param {string} targetInputName - The name attribute of the element (for logging).
  */
 function fetchClientIpAndUpdateInput(element, targetInputName) {
-  // Changed from inputElement to element
   utils.logDebug(
     `Fetching Client IP for element '[name="${targetInputName}"]'...`
-  ); // Updated log
+  );
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -247,9 +256,9 @@ function fetchClientIpAndUpdateInput(element, targetInputName) {
     })
     .then((ip) => {
       const trimmedIp = ip.trim();
-      element.value = trimmedIp; // Use element
+      element.value = trimmedIp;
       utils.logDebug(
-        `Element '[name="${targetInputName}"]' updated with Client IP:`, // Updated log
+        `Element '[name="${targetInputName}"]' updated with Client IP:`,
         trimmedIp
       );
     })
@@ -265,7 +274,7 @@ function fetchClientIpAndUpdateInput(element, targetInputName) {
           `Failed to fetch Client IP for '[name="${targetInputName}"]': ${error.message}`
         );
       }
-      element.value = errorMessage; // Use element
+      element.value = errorMessage;
     });
 }
 
@@ -276,7 +285,7 @@ export function init(customConfigs) {
   // customConfigs argument is from runtime
   utils.startGroup('Initializing Unified Parameter Handler');
 
-  // --- Configuration Loading (No changes needed here, it's correct) ---
+  // --- Configuration Loading (No changes needed) ---
   let baseConfigs;
   if (
     typeof WEBPACK_BUILD_HAS_FIXED_CONFIG !== 'undefined' &&
@@ -364,7 +373,7 @@ export function init(customConfigs) {
     return;
   }
 
-  // --- Handler Processing Loop (This is the refactored part) ---
+  // --- Handler Processing Loop ---
   configsToUse.forEach((config) => {
     if (
       !config ||
@@ -382,6 +391,7 @@ export function init(customConfigs) {
 
     try {
       // Handle special, direct-injection types first
+
       if (
         config.sourceType === 'user_agent' ||
         config.sourceType === 'ip_address'
@@ -390,7 +400,7 @@ export function init(customConfigs) {
           utils.logError(
             `Handler '${config.id}' requires a targetInputName. Skipping.`
           );
-          return; // Use 'return' since we're inside a forEach
+          return;
         }
         const targetElements = document.querySelectorAll(
           `input[name="${config.targetInputName}"], textarea[name="${config.targetInputName}"]`
@@ -411,7 +421,7 @@ export function init(customConfigs) {
                 `Element '[name="${config.targetInputName}"]' updated with User Agent.`
               );
             } else {
-              element.value = 'USER_AGENT_NOT_FOUND'; // Sentinel value
+              element.value = 'USER_AGENT_NOT_FOUND';
               utils.logError(
                 `navigator.userAgent not available for element '[name="${config.targetInputName}"]'.`
               );
