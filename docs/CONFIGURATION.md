@@ -52,6 +52,32 @@ Each object in the configuration array defines a handler and can have the follow
     *   **`enabled`**: (boolean) Set to `true` to enable the retry mechanism. Defaults to `false`.
     *   **`maxAttempts`**: (number, Required if `enabled` is true) The maximum number of times to retry reading the cookie.
     *   **`interval`**: (number, Required if `enabled` is true) The delay in milliseconds between retry attempts.
+*   **`reporting`**: (object, Optional)
+    *   Configuration for reporting the handler's status and results to third-party analytics platforms.
+    *   **`msClarity`**: (boolean) If `true`, the library will report the status and final value for this handler to Microsoft Clarity using `clarity('set', key, value)`. Defaults to `false`.
+
+## Reporting to Microsoft Clarity
+
+When `reporting: { msClarity: true }` is enabled for a handler, the library will send two custom tags to Microsoft Clarity:
+
+1.  **Status Tag**: A tag indicating the outcome of the handler.
+    *   **Key**: `uph_{handler.id}_status` (e.g., `uph_utm_source_status`)
+    *   **Values**:
+        *   `found_url`: Value was successfully found in the URL.
+        *   `found_cookie`: Value was successfully found in a cookie.
+        *   `found_storage`: Value was successfully retrieved from `localStorage`.
+        *   `found_user_agent`: The user agent string was captured.
+        *   `found_ip`: The client IP address was successfully fetched.
+        *   `input_not_found`: The handler ran, but the target input field was not found on the page.
+        *   `ignored_empty_url_param`: The URL parameter was present but had no value, so it was ignored.
+        *   `ip_fetch_timed_out`: The request to fetch the client IP address timed out.
+        *   `ip_fetch_failed`: The request to fetch the client IP address failed for a reason other than a timeout.
+
+2.  **Value Tag**: A tag containing the final value that was processed.
+    *   **Key**: `uph_{handler.id}_value` (e.g., `uph_utm_source_value`)
+    *   **Value**: The actual value found (e.g., "google", "fb.1.123...", "127.0.0.1").
+
+This allows you to create segments and custom reports in Microsoft Clarity based on the attribution data captured by this library.
 
 ## Default Configuration Explained
 
