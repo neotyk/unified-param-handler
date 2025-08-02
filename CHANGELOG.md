@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/neotyk/unified-param-handler/compare/v1.5.1...v1.6.0) (2025-08-02)
+
+
+### Features
+
+* **ms-clarity:** Add Microsoft Clarity reporting for handler events ([d664419](https://github.com/neotyk/unified-param-handler/commit/d6644196c5c561f1eaaf2869e9ce33696ffdb18b))
+
 ### [1.5.1](https://github.com/neotyk/unified-param-handler/compare/v1.5.0...v1.5.1) (2025-08-02)
 
 ## [1.5.0](https://github.com/neotyk/unified-param-handler/compare/v1.4.1...v1.5.0) (2025-07-31)
