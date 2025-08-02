@@ -378,7 +378,10 @@ describe('Core Engine Logic (src/engine.js)', () => {
     // Wait for the fetch promise itself to resolve and the subsequent .then() callbacks
     await global.fetch().then((res) => res.text()); // Wait for the mocked fetch and text processing
 
-    expect(global.fetch).toHaveBeenCalledWith('https://checkip.amazonaws.com/');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://checkip.amazonaws.com/',
+      expect.any(Object)
+    );
     expect(input.value).toBe(mockIp); // Check trimmed IP
     expect(consoleErrorSpy).not.toHaveBeenCalled(); // <<< Use the spy variable
 
