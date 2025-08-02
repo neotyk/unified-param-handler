@@ -23,6 +23,8 @@ import { formatFbClickId } from './utils.js';
  * @property {boolean} [retryMechanism.enabled] - Enable retry if cookie not found initially?
  * @property {number} [retryMechanism.maxAttempts] - Maximum number of retry attempts.
  * @property {number} [retryMechanism.interval] - Delay between retries in milliseconds.
+ * @property {object} [reporting] - Optional configuration for reporting found values to analytics services.
+ * @property {boolean} [reporting.msClarity] - If true, report the found value to Microsoft Clarity.
  */
 
 /**
@@ -49,6 +51,9 @@ export const defaultHandlerConfigs = [
       maxAttempts: 5,
       interval: 5000,
     },
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'fbp',
@@ -59,6 +64,9 @@ export const defaultHandlerConfigs = [
       enabled: true,
       maxAttempts: 5,
       interval: 5000,
+    },
+    reporting: {
+      msClarity: true,
     },
   },
 
@@ -73,6 +81,9 @@ export const defaultHandlerConfigs = [
       cookieNameToSet: 'gclid',
       daysToExpiry: 90,
     },
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'wbraid',
@@ -83,6 +94,9 @@ export const defaultHandlerConfigs = [
       enabledOnUrlHit: true,
       cookieNameToSet: 'wbraid',
       daysToExpiry: 90,
+    },
+    reporting: {
+      msClarity: true,
     },
   },
   {
@@ -95,6 +109,9 @@ export const defaultHandlerConfigs = [
       cookieNameToSet: 'gbraid',
       daysToExpiry: 90,
     },
+    reporting: {
+      msClarity: true,
+    },
   },
 
   // --- UTM Handlers ---
@@ -104,6 +121,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_source',
     targetInputName: 'custom UTM_SOURCE',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_medium',
@@ -111,6 +131,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_medium',
     targetInputName: 'custom UTM_MEDIUM',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_campaign',
@@ -118,6 +141,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_campaign',
     targetInputName: 'custom UTM_CAMPAIGN',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_term',
@@ -125,6 +151,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_term',
     targetInputName: 'custom UTM_TERM',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_content',
@@ -132,6 +161,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_content',
     targetInputName: 'custom UTM_CONTENT',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_id',
@@ -139,6 +171,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_id',
     targetInputName: 'custom UTM_ID',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_pub',
@@ -146,6 +181,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_pub',
     targetInputName: 'custom UTM_PUB',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_size',
@@ -153,6 +191,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_size',
     targetInputName: 'custom UTM_SIZE',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'utm_broker',
@@ -160,6 +201,9 @@ export const defaultHandlerConfigs = [
     urlParamName: 'utm_broker',
     targetInputName: 'custom UTM_BROKER',
     persist: true,
+    reporting: {
+      msClarity: true,
+    },
   },
   // Add more UTMs or other parameters here following the pattern
 
@@ -169,11 +213,17 @@ export const defaultHandlerConfigs = [
     sourceType: 'user_agent', // Special source type for User Agent
     targetInputName: 'userAgent', // Target input name
     // No URL param or cookie needed
+    reporting: {
+      msClarity: true,
+    },
   },
   {
     id: 'clientIp',
     sourceType: 'ip_address', // Special source type for Client IP
     targetInputName: 'clientIp', // Target input name
     // No URL param or cookie needed
+    reporting: {
+      msClarity: true,
+    },
   },
 ];

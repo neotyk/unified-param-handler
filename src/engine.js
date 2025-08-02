@@ -5,6 +5,18 @@ import { defaultHandlerConfigs } from './config.js';
 import { formatFbClickId } from './utils.js';
 
 /**
+ * Reports a key-value pair to Microsoft Clarity if the API is available.
+ * @param {string} key - The key to report.
+ * @param {string} value - The value to report.
+ */
+function reportToClarity(key, value) {
+  if (typeof window.clarity === 'function') {
+    window.clarity('set', key, value);
+    utils.logDebug(`Reported to Clarity: ${key} = ${value}`);
+  }
+}
+
+/**
  * @typedef {import('./config.js').HandlerConfig} HandlerConfig
  */
 
@@ -102,6 +114,9 @@ function processHandler(config) {
       utils.logDebug(
         `Ignoring empty value from URL param '${config.urlParamName}'. Will check other sources.`
       );
+      if (config.reporting && config.reporting.msClarity) {
+        reportToClarity(`uph_${config.id}_status`, 'ignored_empty_url_param');
+      }
     }
     // MODIFICATION END
   }
@@ -162,11 +177,19 @@ function processHandler(config) {
     }
     // The fresh, formatted, persisted value is the one we'll use for the input
     freshValue = valueToPersist;
+    if (config.reporting && config.reporting.msClarity) {
+      reportToClarity(`uph_${config.id}_status`, 'found_url');
+      reportToClarity(`uph_${config.id}_value`, freshValue);
+    }
   } else if (valueSource === 'cookie') {
     utils.logDebug(
       `Found fresh value for '${config.id}' from Cookie:`,
       freshValue
     );
+    if (config.reporting && config.reporting.msClarity) {
+      reportToClarity(`uph_${config.id}_status`, 'found_cookie');
+      reportToClarity(`uph_${config.id}_value`, freshValue);
+    }
   }
 
   // --- 3. Determine the final value for the input field ---
@@ -178,6 +201,10 @@ function processHandler(config) {
       finalValue = persistedValue;
       valueSource = 'storage'; // Update source for logging
       utils.logDebug(`Using persisted value for '${config.id}':`, finalValue);
+      if (config.reporting && config.reporting.msClarity) {
+        reportToClarity(`uph_${config.id}_status`, 'found_storage');
+        reportToClarity(`uph_${config.id}_value`, finalValue);
+      }
     }
   }
 
@@ -201,6 +228,9 @@ function processHandler(config) {
           utils.logDebug(
             `No value found for '${config.id}', cleared element '[name="${config.targetInputName}"]'.`
           );
+          if (config.reporting && config.reporting.msClarity) {
+            reportToClarity(`uph_${config.id}_status`, 'cleared_input');
+          }
         }
         // Handle cookie retry only if no value could be found from any source
         if (
@@ -221,11 +251,17 @@ function processHandler(config) {
       utils.logDebug(
         `No elements found with name '${config.targetInputName}' on this page.`
       );
+      if (config.reporting && config.reporting.msClarity) {
+        reportToClarity(`uph_${config.id}_status`, 'input_not_found');
+      }
     }
   } else if (freshValue === null) {
     utils.logDebug(
       `No value found for '${config.id}' and no targetInputName specified.`
     );
+    if (config.reporting && config.reporting.msClarity) {
+      reportToClarity(`uph_${config.id}_status`, 'not_found');
+    }
   }
 
   utils.endGroup();
@@ -237,8 +273,9 @@ function processHandler(config) {
  * @private
  * @param {HTMLInputElement|HTMLTextAreaElement} element - The element to update with the IP address.
  * @param {string} targetInputName - The name attribute of the element (for logging).
+ * @param {HandlerConfig} config - The handler configuration object.
  */
-function fetchClientIpAndUpdateInput(element, targetInputName) {
+function fetchClientIpAndUpdateInput(element, targetInputName, config) {
   utils.logDebug(
     `Fetching Client IP for element '[name="${targetInputName}"]'...`
   );
@@ -246,7 +283,7 @@ function fetchClientIpAndUpdateInput(element, targetInputName) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-  fetch('https://checkip.amazonaws.com/', { signal: controller.signal })
+  return fetch('https://checkip.amazonaws.com/', { signal: controller.signal })
     .then((res) => {
       clearTimeout(timeoutId);
       if (!res.ok) {
@@ -261,6 +298,10 @@ function fetchClientIpAndUpdateInput(element, targetInputName) {
         `Element '[name="${targetInputName}"]' updated with Client IP:`,
         trimmedIp
       );
+      if (config.reporting && config.reporting.msClarity) {
+        reportToClarity(`uph_${config.id}_status`, 'found_ip');
+        reportToClarity(`uph_${config.id}_value`, trimmedIp);
+      }
     })
     .catch((error) => {
       clearTimeout(timeoutId);
@@ -268,11 +309,17 @@ function fetchClientIpAndUpdateInput(element, targetInputName) {
       if (error.name === 'AbortError') {
         errorMessage = 'IP_FETCH_TIMED_OUT';
         utils.logError(`IP fetch for '[name="${targetInputName}"]' timed out.`);
+        if (config.reporting && config.reporting.msClarity) {
+          reportToClarity(`uph_${config.id}_status`, 'ip_fetch_timed_out');
+        }
       } else {
         errorMessage = 'IP_FETCH_FAILED';
         utils.logError(
           `Failed to fetch Client IP for '[name="${targetInputName}"]': ${error.message}`
         );
+        if (config.reporting && config.reporting.msClarity) {
+          reportToClarity(`uph_${config.id}_status`, 'ip_fetch_failed');
+        }
       }
       element.value = errorMessage;
     });
@@ -420,14 +467,30 @@ export function init(customConfigs) {
               utils.logDebug(
                 `Element '[name="${config.targetInputName}"]' updated with User Agent.`
               );
+              if (config.reporting && config.reporting.msClarity) {
+                reportToClarity(`uph_${config.id}_status`, 'found_user_agent');
+                reportToClarity(`uph_${config.id}_value`, navigator.userAgent);
+              }
             } else {
               element.value = 'USER_AGENT_NOT_FOUND';
               utils.logError(
                 `navigator.userAgent not available for element '[name="${config.targetInputName}"]'.`
               );
+              if (config.reporting && config.reporting.msClarity) {
+                reportToClarity(
+                  `uph_${config.id}_status`,
+                  'user_agent_not_found'
+                );
+              }
             }
           } else if (config.sourceType === 'ip_address') {
-            fetchClientIpAndUpdateInput(element, config.targetInputName);
+            fetchClientIpAndUpdateInput(
+              element,
+              config.targetInputName,
+              config
+            ).catch((_error) => {
+              // The error is already logged inside the function, so we just need to catch the rejection.
+            });
           }
         });
       }
@@ -445,6 +508,10 @@ export function init(customConfigs) {
       utils.logError(
         `Unexpected error processing handler '${config.id}': ${error.message}`
       );
+      if (config.reporting && config.reporting.msClarity) {
+        reportToClarity(`uph_${config.id}_status`, 'error');
+        reportToClarity(`uph_${config.id}_error`, error.message);
+      }
       console.error(error);
     }
   });
