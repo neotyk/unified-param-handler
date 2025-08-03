@@ -212,6 +212,40 @@ function processHandler(config) {
               valueSource || 'none'
             }.`
           );
+
+          // --- Monitor for external changes ---
+          if (config.monitorChanges !== false) {
+            const observer = new MutationObserver((mutationsList) => {
+              for (const mutation of mutationsList) {
+                if (
+                  mutation.type === 'attributes' &&
+                  mutation.attributeName === 'value'
+                ) {
+                  const newValue = element.value;
+                  // Check if the new value is actually different
+                  if (newValue !== finalValue) {
+                    utils.logDebug(
+                      `Value of input [name="${config.targetInputName}"] was changed externally from '${finalValue}' to '${newValue}'. Reporting.`
+                    );
+                    if (config.reporting && config.reporting.msClarity) {
+                      reportToClarity(`uph_${config.id}_overwritten`, 'true');
+                      reportToClarity(
+                        `uph_${config.id}_original_value`,
+                        finalValue
+                      );
+                      reportToClarity(`uph_${config.id}_new_value`, newValue);
+                    }
+                    observer.disconnect(); // Self-destruct after firing once
+                  }
+                }
+              }
+            });
+
+            observer.observe(element, { attributes: true });
+            utils.logDebug(
+              `Attached MutationObserver to [name="${config.targetInputName}"].`
+            );
+          }
         } else {
           element.value = '';
           utils.logDebug(

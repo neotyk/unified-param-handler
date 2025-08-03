@@ -482,3 +482,84 @@ describe('Core Engine Logic (src/engine.js)', () => {
     });
   });
 });
+
+describe('MutationObserver Overwrite Protection', () => {
+  let clarityMock;
+  let init;
+  let utils;
+
+  const utmSourceConfig = {
+    id: 'utm_source',
+    sourceType: 'url',
+    urlParamName: 'utm_source',
+    targetInputName: 'utm_source',
+    reporting: { msClarity: true },
+    monitorChanges: true, // Explicitly enable for clarity in tests
+  };
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.useFakeTimers();
+
+    init = require('../src/engine.js').init;
+    utils = require('../src/utils.js');
+
+    clarityMock = jest.fn();
+    Object.defineProperty(window, 'clarity', {
+      value: clarityMock,
+      writable: true,
+      configurable: true,
+    });
+
+    document.body.innerHTML = '<input type="hidden" name="utm_source" />';
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+    delete window.clarity;
+  });
+
+  test('should report to Clarity when an input value is overwritten', (done) => {
+    jest
+      .spyOn(utils, 'getUrlParams')
+      .mockReturnValue(new URLSearchParams('utm_source=original_value'));
+
+    init([utmSourceConfig]);
+
+    const input = document.querySelector('input[name="utm_source"]');
+    expect(input.value).toBe('original_value');
+
+    // The MutationObserver is asynchronous. We need to wait for it to fire.
+    // We can do this by wrapping the value change in a promise.
+    new Promise((resolve) => {
+      // Simulate an external script changing the value
+      input.setAttribute('value', 'overwritten_value');
+
+      // The observer callback should be called on the next tick of the event loop
+      setTimeout(resolve, 0);
+    }).then(() => {
+      // Now check the mock
+      expect(clarityMock).toHaveBeenCalledWith(
+        'set',
+        'uph_utm_source_overwritten',
+        'true'
+      );
+      expect(clarityMock).toHaveBeenCalledWith(
+        'set',
+        'uph_utm_source_original_value',
+        'original_value'
+      );
+      expect(clarityMock).toHaveBeenCalledWith(
+        'set',
+        'uph_utm_source_new_value',
+        'overwritten_value'
+      );
+      done(); // Signal that the async test is complete
+    });
+
+    // Advance timers to execute the setTimeout
+    jest.runOnlyPendingTimers();
+  });
+});

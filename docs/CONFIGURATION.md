@@ -55,6 +55,11 @@ Each object in the configuration array defines a handler and can have the follow
 *   **`reporting`**: (object, Optional)
     *   Configuration for reporting the handler's status and results to third-party analytics platforms.
     *   **`msClarity`**: (boolean) If `true`, the library will report the status and final value for this handler to Microsoft Clarity using `clarity('set', key, value)`. Defaults to `false`.
+*   **`monitorChanges`**: (boolean, Optional, applies only when `targetInputName` is specified)
+    *   If `true` (the default), the library will attach a `MutationObserver` to the target input field after setting its value.
+    *   If an external script subsequently changes the value of the input, the observer will detect this change and send a one-time report to MS Clarity with details about the overwrite.
+    *   This is highly recommended to diagnose issues where other scripts (like from a CRM or an A/B testing platform) might be clearing or altering the attribution data you are trying to capture.
+    *   Set to `false` to disable this behavior for a specific handler.
 
 ## Reporting to Microsoft Clarity
 
