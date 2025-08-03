@@ -3,18 +3,7 @@ import * as utils from './utils.js';
 // defaultHandlerConfigs will be from src/config.js or src/dummy-config.js based on build
 import { defaultHandlerConfigs } from './config.js';
 import { formatFbClickId } from './utils.js';
-
-/**
- * Reports a key-value pair to Microsoft Clarity if the API is available.
- * @param {string} key - The key to report.
- * @param {string} value - The value to report.
- */
-function reportToClarity(key, value) {
-  if (typeof window.clarity === 'function') {
-    window.clarity('set', key, value);
-    utils.logDebug(`Reported to Clarity: ${key} = ${value}`);
-  }
-}
+import { reportToClarity } from './reporting.js';
 
 /**
  * @typedef {import('./config.js').HandlerConfig} HandlerConfig

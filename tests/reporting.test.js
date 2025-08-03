@@ -206,3 +206,132 @@ describe('MS Clarity Reporting', () => {
     );
   });
 });
+
+describe('MS Clarity Async Reporting', () => {
+  let clarityMock;
+  let logErrorSpy;
+  let init;
+  let utils;
+
+  // Define a reusable config for the tests
+  const utmConfigSource = {
+    id: 'utm_source',
+    sourceType: 'url',
+    urlParamName: 'utm_source',
+    targetInputName: 'utm_source',
+    reporting: { msClarity: true },
+  };
+
+  beforeEach(() => {
+    // Reset modules to clear state like isPolling in reporting.js
+    jest.resetModules();
+    jest.useFakeTimers();
+
+    // Re-require modules to get fresh copies
+    init = require('../src/engine.js').init;
+    utils = require('../src/utils.js');
+
+    // Mock window.clarity, but make it undefined initially
+    clarityMock = jest.fn();
+    Object.defineProperty(window, 'clarity', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    // Spy on console.error to check for timeout messages
+    logErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    // Spy on setInterval to allow assertions
+    jest.spyOn(global, 'setInterval');
+
+    // Reset DOM and localStorage
+    document.body.innerHTML = '';
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    // Restore real timers and mocks
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+    delete window.clarity;
+  });
+
+  test('should queue events and start polling when Clarity is not available', () => {
+    jest
+      .spyOn(utils, 'getUrlParams')
+      .mockReturnValue(new URLSearchParams('utm_source=queued'));
+
+    init([utmConfigSource]);
+
+    // Assert that clarity was NOT called directly because it's undefined
+    expect(clarityMock).not.toHaveBeenCalled();
+    // Assert that the polling has started
+    expect(setInterval).toHaveBeenCalledTimes(1);
+    expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 100);
+  });
+
+  test('should flush queue and report wait time when Clarity becomes available', () => {
+    jest
+      .spyOn(utils, 'getUrlParams')
+      .mockReturnValue(new URLSearchParams('utm_source=google'));
+
+    init([utmConfigSource]);
+
+    // Nothing should have been called yet
+    expect(clarityMock).not.toHaveBeenCalled();
+
+    // Advance time a bit
+    jest.advanceTimersByTime(500);
+
+    // Now, make Clarity available
+    window.clarity = clarityMock;
+
+    // Advance time to trigger the next poll
+    jest.advanceTimersByTime(100);
+
+    // Check that the wait time was reported. The value should be a string.
+    expect(clarityMock).toHaveBeenCalledWith(
+      'set',
+      'uph_waited_for_clarity_ms',
+      '600' // 500ms + 100ms
+    );
+
+    // Check that the original queued event was flushed
+    expect(clarityMock).toHaveBeenCalledWith(
+      'set',
+      'uph_utm_source_status',
+      'found_url'
+    );
+    expect(clarityMock).toHaveBeenCalledWith(
+      'set',
+      'uph_utm_source_value',
+      'google'
+    );
+  });
+
+  test('should handle timeout and discard the queue', () => {
+    jest
+      .spyOn(utils, 'getUrlParams')
+      .mockReturnValue(new URLSearchParams('utm_source=timeout'));
+
+    init([utmConfigSource]);
+
+    // Advance timers past the 10-second timeout
+    jest.advanceTimersByTime(11000);
+
+    // Ensure the error was logged
+    expect(logErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Timed out waiting for MS Clarity')
+    );
+
+    // Now, make Clarity available
+    window.clarity = clarityMock;
+
+    // Advance time again
+    jest.advanceTimersByTime(200);
+
+    // Assert that NOTHING was called, because the queue was discarded
+    expect(clarityMock).not.toHaveBeenCalled();
+  });
+});
