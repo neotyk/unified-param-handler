@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.8.0](https://github.com/neotyk/unified-param-handler/compare/v1.7.0...v1.8.0) (2025-08-03)
+
+
+### Features
+
+* **engine:** Add overwrite detection using MutationObserver ([f380bea](https://github.com/neotyk/unified-param-handler/commit/f380bea9f25ddbc292d6f9fa8bc9f1a8fa333faf))
+
 ## [1.7.0](https://github.com/neotyk/unified-param-handler/compare/v1.6.1...v1.7.0) (2025-08-03)
 
 
