@@ -385,14 +385,16 @@ function fetchClientIpAndUpdateInput(element, targetInputName, config) {
 }
 
 /**
- * Initializes the Unified Parameter Handler.
+ * Resolves the final configuration array based on build-time and runtime settings.
+ * This function encapsulates all the logic for selecting the correct handlers,
+ * preserving tree-shaking capabilities for build-time configurations.
+ * @param {HandlerConfig[]} [runtimeConfigs] - Optional array of configs provided at runtime.
+ * @returns {HandlerConfig[]} The final array of handler configurations to be processed.
  */
-export function init(customConfigs) {
-  // customConfigs argument is from runtime
-  utils.startGroup('Initializing Unified Parameter Handler');
-
-  // --- Configuration Loading (No changes needed) ---
+function resolveConfig(runtimeConfigs) {
   let baseConfigs;
+
+  // This block is structured to be tree-shaken by Webpack.
   if (
     typeof WEBPACK_BUILD_HAS_FIXED_CONFIG !== 'undefined' &&
     WEBPACK_BUILD_HAS_FIXED_CONFIG
@@ -425,7 +427,7 @@ export function init(customConfigs) {
       );
       baseConfigs = defaultHandlerConfigs;
     }
-    if (customConfigs) {
+    if (runtimeConfigs) {
       utils.logDebug(
         'Runtime customConfigs argument ignored due to fixed build configuration.'
       );
@@ -434,16 +436,16 @@ export function init(customConfigs) {
     utils.logDebug(
       'Build does not have a fixed configuration. Runtime configs can be used.'
     );
-    if (Array.isArray(customConfigs) && customConfigs.length > 0) {
+    if (Array.isArray(runtimeConfigs) && runtimeConfigs.length > 0) {
       utils.logDebug('Using customConfigs provided at runtime.');
-      baseConfigs = customConfigs;
+      baseConfigs = runtimeConfigs;
     } else {
       utils.logDebug('Using defaultHandlerConfigs from src/config.js.');
       baseConfigs = defaultHandlerConfigs;
     }
   }
 
-  let configsToUse = baseConfigs;
+  // This filtering logic is also designed to be tree-shaken.
   if (typeof WEBPACK_CONFIG_NAME !== 'undefined' && WEBPACK_CONFIG_NAME) {
     utils.logDebug(
       `Webpack build specified configName to filter: ${WEBPACK_CONFIG_NAME}`
@@ -453,23 +455,30 @@ export function init(customConfigs) {
         (c) => c.id === WEBPACK_CONFIG_NAME
       );
       if (singleConfig) {
-        configsToUse = [singleConfig];
-        utils.logDebug(
-          `Filtered to use only specified config ID: ${WEBPACK_CONFIG_NAME}`,
-          configsToUse
-        );
+        return [singleConfig]; // Return the single filtered config
       } else {
         utils.logError(
-          `Specified configName '${WEBPACK_CONFIG_NAME}' not found in the chosen base configurations. Using all chosen base configurations.`
+          `Specified configName '${WEBPACK_CONFIG_NAME}' not found. Using all chosen base configurations.`
         );
       }
     } else {
       utils.logError(
         'Base configurations are not an array, cannot filter by WEBPACK_CONFIG_NAME.'
       );
-      configsToUse = [];
+      return []; // Return empty if base is not an array
     }
   }
+
+  return baseConfigs;
+}
+
+/**
+ * Initializes the Unified Parameter Handler.
+ */
+export function init(customConfigs) {
+  utils.startGroup('Initializing Unified Parameter Handler');
+
+  const configsToUse = resolveConfig(customConfigs);
 
   utils.logDebug('Final configurations to use:', configsToUse);
 
@@ -497,7 +506,6 @@ export function init(customConfigs) {
 
     try {
       // Handle special, direct-injection types first
-
       if (
         config.sourceType === 'user_agent' ||
         config.sourceType === 'ip_address'
@@ -519,7 +527,6 @@ export function init(customConfigs) {
         }
 
         targetElements.forEach((element) => {
-          // Now, apply the specific logic to each found element
           if (config.sourceType === 'user_agent') {
             if (typeof navigator !== 'undefined' && navigator.userAgent) {
               element.value = navigator.userAgent;
@@ -548,7 +555,7 @@ export function init(customConfigs) {
               config.targetInputName,
               config
             ).catch((_error) => {
-              // The error is already logged inside the function, so we just need to catch the rejection.
+              // Error is logged inside the function
             });
           }
         });
