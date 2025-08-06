@@ -1,4 +1,5 @@
 // tests/engine.test.js
+import { SourceType } from '../src/constants';
 import { init } from '../src/engine';
 import * as utils from '../src/utils'; // Import utils for spying
 import { defaultHandlerConfigs } from '../src/config';
@@ -270,7 +271,7 @@ describe('Core Engine Logic (src/engine.js)', () => {
     const customConfig = [
       {
         id: 'custom_param',
-        sourceType: 'url',
+        sourceType: SourceType.URL,
         urlParamName: 'trk',
         targetInputName: 'custom-tracker',
       },
@@ -295,7 +296,7 @@ describe('Core Engine Logic (src/engine.js)', () => {
     const invalidConfig = [
       {
         id: 'valid',
-        sourceType: 'url',
+        sourceType: SourceType.URL,
         urlParamName: 'valid',
         targetInputName: 'valid-input',
       },
@@ -490,7 +491,7 @@ describe('MutationObserver Overwrite Protection', () => {
 
   const utmSourceConfig = {
     id: 'utm_source',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_source',
     targetInputName: 'utm_source',
     reporting: { msClarity: true },

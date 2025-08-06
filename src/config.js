@@ -1,10 +1,11 @@
 // src/config.js
 import { formatFbClickId } from './utils.js';
+import { SourceType } from './constants.js';
 
 /**
  * @typedef {Object} HandlerConfig
  * @property {string} id - Unique internal identifier (e.g., 'fbc', 'gclid', 'utm_source'). Used mainly for logging.
- * @property {'url'|'cookie'|'url_or_cookie'|'user_agent'|'ip_address'} sourceType - Where to look for the value.
+ * @property {SourceType} sourceType - Where to look for the value.
  *   - 'url': Check URL query parameters only.
  *   - 'cookie': Check document cookies only.
  *   - 'url_or_cookie': Check URL first, then cookie if not found in URL.
@@ -36,7 +37,7 @@ export const defaultHandlerConfigs = [
   // --- Facebook Handlers ---
   {
     id: 'fbc',
-    sourceType: 'url_or_cookie',
+    sourceType: SourceType.URL_OR_COOKIE,
     urlParamName: 'fbclid',
     cookieName: '_fbc',
     targetInputName: 'custom FBC', // Example name, adjust as needed
@@ -57,7 +58,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'fbp',
-    sourceType: 'cookie',
+    sourceType: SourceType.COOKIE,
     cookieName: '_fbp',
     targetInputName: 'custom FBP', // Example name, adjust as needed
     retryMechanism: {
@@ -73,7 +74,7 @@ export const defaultHandlerConfigs = [
   // --- Google Handlers ---
   {
     id: 'gclid',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'gclid',
     targetInputName: 'custom GCLID', // Example name, adjust as needed
     setCookie: {
@@ -87,7 +88,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'wbraid',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'wbraid',
     targetInputName: 'custom WBRAID', // Example name, adjust as needed
     setCookie: {
@@ -101,7 +102,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'gbraid',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'gbraid',
     targetInputName: 'custom GBRAID', // Example name, adjust as needed
     setCookie: {
@@ -117,7 +118,7 @@ export const defaultHandlerConfigs = [
   // --- UTM Handlers ---
   {
     id: 'utm_source',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_source',
     targetInputName: 'custom UTM_SOURCE',
     persist: true,
@@ -127,7 +128,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_medium',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_medium',
     targetInputName: 'custom UTM_MEDIUM',
     persist: true,
@@ -137,7 +138,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_campaign',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_campaign',
     targetInputName: 'custom UTM_CAMPAIGN',
     persist: true,
@@ -147,7 +148,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_term',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_term',
     targetInputName: 'custom UTM_TERM',
     persist: true,
@@ -157,7 +158,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_content',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_content',
     targetInputName: 'custom UTM_CONTENT',
     persist: true,
@@ -167,7 +168,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_id',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_id',
     targetInputName: 'custom UTM_ID',
     persist: true,
@@ -177,7 +178,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_pub',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_pub',
     targetInputName: 'custom UTM_PUB',
     persist: true,
@@ -187,7 +188,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_size',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_size',
     targetInputName: 'custom UTM_SIZE',
     persist: true,
@@ -197,7 +198,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'utm_broker',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_broker',
     targetInputName: 'custom UTM_BROKER',
     persist: true,
@@ -210,7 +211,7 @@ export const defaultHandlerConfigs = [
   // --- Browser/Client Info ---
   {
     id: 'userAgent',
-    sourceType: 'user_agent', // Special source type for User Agent
+    sourceType: SourceType.USER_AGENT, // Special source type for User Agent
     targetInputName: 'userAgent', // Target input name
     // No URL param or cookie needed
     reporting: {
@@ -219,7 +220,7 @@ export const defaultHandlerConfigs = [
   },
   {
     id: 'clientIp',
-    sourceType: 'ip_address', // Special source type for Client IP
+    sourceType: SourceType.IP_ADDRESS, // Special source type for Client IP
     targetInputName: 'clientIp', // Target input name
     // No URL param or cookie needed
     reporting: {

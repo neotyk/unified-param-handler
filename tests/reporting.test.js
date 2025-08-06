@@ -1,3 +1,4 @@
+import { SourceType } from '../src/constants';
 import { init } from '../src/engine.js';
 import * as utils from '../src/utils.js';
 
@@ -25,7 +26,7 @@ describe('MS Clarity Reporting', () => {
     init([
       {
         id: 'utm_source',
-        sourceType: 'url',
+        sourceType: SourceType.URL,
         urlParamName: 'utm_source',
         targetInputName: 'utm_source',
         reporting: { msClarity: true },
@@ -53,7 +54,7 @@ describe('MS Clarity Reporting', () => {
     init([
       {
         id: 'fbc',
-        sourceType: 'cookie',
+        sourceType: SourceType.COOKIE,
         cookieName: '_fbc',
         targetInputName: 'fbc',
         reporting: { msClarity: true },
@@ -79,7 +80,7 @@ describe('MS Clarity Reporting', () => {
     init([
       {
         id: 'utm_campaign',
-        sourceType: 'url',
+        sourceType: SourceType.URL,
         urlParamName: 'utm_campaign',
         targetInputName: 'utm_campaign',
         persist: true,
@@ -107,7 +108,7 @@ describe('MS Clarity Reporting', () => {
     init([
       {
         id: 'utm_medium',
-        sourceType: 'url',
+        sourceType: SourceType.URL,
         urlParamName: 'utm_medium',
         targetInputName: 'utm_medium',
         reporting: { msClarity: true },
@@ -129,7 +130,7 @@ describe('MS Clarity Reporting', () => {
     init([
       {
         id: 'utm_term',
-        sourceType: 'url',
+        sourceType: SourceType.URL,
         urlParamName: 'utm_term',
         targetInputName: 'utm_term',
         reporting: { msClarity: true },
@@ -153,7 +154,7 @@ describe('MS Clarity Reporting', () => {
     init([
       {
         id: 'userAgent',
-        sourceType: 'user_agent',
+        sourceType: SourceType.USER_AGENT,
         targetInputName: 'userAgent',
         reporting: { msClarity: true },
       },
@@ -184,7 +185,7 @@ describe('MS Clarity Reporting', () => {
     init([
       {
         id: 'clientIp',
-        sourceType: 'ip_address',
+        sourceType: SourceType.IP_ADDRESS,
         targetInputName: 'clientIp',
         reporting: { msClarity: true },
       },
@@ -216,7 +217,7 @@ describe('MS Clarity Async Reporting', () => {
   // Define a reusable config for the tests
   const utmConfigSource = {
     id: 'utm_source',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_source',
     targetInputName: 'utm_source',
     reporting: { msClarity: true },

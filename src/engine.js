@@ -3,6 +3,7 @@ import * as utils from './utils.js';
 // defaultHandlerConfigs will be from src/config.js or src/dummy-config.js based on build
 import { defaultHandlerConfigs } from './config.js';
 import { formatFbClickId } from './utils.js';
+import { SourceType } from './constants.js';
 import { reportToClarity } from './reporting.js';
 
 /**
@@ -507,8 +508,8 @@ export function init(customConfigs) {
     try {
       // Handle special, direct-injection types first
       if (
-        config.sourceType === 'user_agent' ||
-        config.sourceType === 'ip_address'
+        config.sourceType === SourceType.USER_AGENT ||
+        config.sourceType === SourceType.IP_ADDRESS
       ) {
         if (!config.targetInputName) {
           utils.logError(
@@ -527,7 +528,7 @@ export function init(customConfigs) {
         }
 
         targetElements.forEach((element) => {
-          if (config.sourceType === 'user_agent') {
+          if (config.sourceType === SourceType.USER_AGENT) {
             if (typeof navigator !== 'undefined' && navigator.userAgent) {
               element.value = navigator.userAgent;
               utils.logDebug(
@@ -549,7 +550,7 @@ export function init(customConfigs) {
                 );
               }
             }
-          } else if (config.sourceType === 'ip_address') {
+          } else if (config.sourceType === SourceType.IP_ADDRESS) {
             fetchClientIpAndUpdateInput(
               element,
               config.targetInputName,
@@ -561,7 +562,11 @@ export function init(customConfigs) {
         });
       }
       // Handle URL/Cookie/Storage types
-      else if (['url', 'cookie', 'url_or_cookie'].includes(config.sourceType)) {
+      else if (
+        [SourceType.URL, SourceType.COOKIE, SourceType.URL_OR_COOKIE].includes(
+          config.sourceType
+        )
+      ) {
         processHandler(config);
       }
       // Handle unknown types
