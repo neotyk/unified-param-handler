@@ -298,31 +298,37 @@ function processHandler(config) {
   );
 
   // 4. Update Input Field(s) if they exist
-  if (config.targetInputName) {
-    const targetElements = document.querySelectorAll(
-      `input[name="${config.targetInputName}"], textarea[name="${config.targetInputName}"]`
-    );
-
-    if (targetElements.length > 0) {
-      targetElements.forEach((element) => {
-        updateInputElement(element, finalValue, finalSource, config);
-      });
-    } else {
+  if (!config.targetInputName) {
+    if (finalValue === null) {
       utils.logDebug(
-        `No elements found with name '${config.targetInputName}' on this page.`
+        `No value found for '${config.id}' and no targetInputName specified.`
       );
       if (config.reporting && config.reporting.msClarity) {
-        reportToClarity(`uph_${config.id}_status`, 'input_not_found');
+        reportToClarity(`uph_${config.id}_status`, 'not_found');
       }
     }
-  } else if (finalValue === null) {
+    utils.endGroup();
+    return;
+  }
+
+  const targetElements = document.querySelectorAll(
+    `input[name="${config.targetInputName}"], textarea[name="${config.targetInputName}"]`
+  );
+
+  if (targetElements.length === 0) {
     utils.logDebug(
-      `No value found for '${config.id}' and no targetInputName specified.`
+      `No elements found with name '${config.targetInputName}' on this page.`
     );
     if (config.reporting && config.reporting.msClarity) {
-      reportToClarity(`uph_${config.id}_status`, 'not_found');
+      reportToClarity(`uph_${config.id}_status`, 'input_not_found');
     }
+    utils.endGroup();
+    return;
   }
+
+  targetElements.forEach((element) => {
+    updateInputElement(element, finalValue, finalSource, config);
+  });
 
   utils.endGroup();
 }
