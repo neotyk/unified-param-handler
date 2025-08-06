@@ -79,9 +79,10 @@ function waitForCookieAndUpdateInput(
 }
 
 /**
- * Extracts a value from the configured source (URL or cookie).
- * @param {HandlerConfig} config - The handler configuration.
- * @returns {{value: string|null, source: string|null}} The found value and its source.
+ * Extracts a value from the configured source (URL or cookie) based on the handler's sourceType.
+ * It prioritizes URL parameters if sourceType includes 'url', then falls back to cookies if specified.
+ * @param {HandlerConfig} config - The handler configuration object.
+ * @returns {{value: string|null, source: string|null}} An object containing the extracted value (or null) and its source ('url' or 'cookie').
  */
 function extractValueFromSource(config) {
   let value = null;
@@ -119,10 +120,10 @@ function extractValueFromSource(config) {
 
 /**
  * Applies formatting, persists the value to localStorage, and sets a cookie.
- * This is only done for values freshly found from the URL.
- * @param {string} value - The value to process.
- * @param {HandlerConfig} config - The handler configuration.
- * @returns {string} The processed (potentially formatted) value.
+ * This function is typically called when a value is freshly found from the URL.
+ * @param {string} value - The raw value extracted from the source.
+ * @param {HandlerConfig} config - The handler configuration object.
+ * @returns {string} The processed value after applying formatting, ready for persistence and input update.
  */
 function applyFormattingAndPersistence(value, config) {
   utils.logDebug(`Found fresh value for '${config.id}' from URL:`, value);
@@ -169,11 +170,12 @@ function applyFormattingAndPersistence(value, config) {
 }
 
 /**
- * Determines the final value to be used, checking persisted storage if no fresh value was found.
- * @param {string|null} freshValue - The value from URL/cookie, or null.
- * @param {string|null} valueSource - The source of the fresh value.
- * @param {HandlerConfig} config - The handler configuration.
- * @returns {{finalValue: string|null, finalSource: string|null}} The definitive value and its source.
+ * Determines the final value to be used for a handler.
+ * If a fresh value (from URL or cookie) is available, it's used. Otherwise, it checks persistent storage (localStorage) if configured.
+ * @param {string|null} freshValue - The value obtained directly from the URL or cookie, or null if not found.
+ * @param {string|null} valueSource - The immediate source of the `freshValue` ('url' or 'cookie'), or null.
+ * @param {HandlerConfig} config - The handler configuration object.
+ * @returns {{finalValue: string|null, finalSource: string|null}} An object containing the definitive value to be used and its ultimate source ('url', 'cookie', or 'storage').
  */
 function determineFinalValue(freshValue, valueSource, config) {
   if (freshValue !== null) {
@@ -199,11 +201,13 @@ function determineFinalValue(freshValue, valueSource, config) {
 }
 
 /**
- * Updates the DOM element with the final value and sets up MutationObserver.
+ * Updates the specified DOM input element with the final determined value.
+ * Also attaches a MutationObserver if `monitorChanges` is enabled in the config,
+ * to detect and report external modifications to the input's value.
  * @param {HTMLInputElement|HTMLTextAreaElement} element - The DOM element to update.
- * @param {string|null} finalValue - The value to set.
- * @param {string|null} finalSource - The source of the value.
- * @param {HandlerConfig} config - The handler configuration.
+ * @param {string|null} finalValue - The value to set in the input field.
+ * @param {string|null} finalSource - The ultimate source of the `finalValue` ('url', 'cookie', 'storage', or null).
+ * @param {HandlerConfig} config - The handler configuration object.
  */
 function updateInputElement(element, finalValue, finalSource, config) {
   if (finalValue !== null) {

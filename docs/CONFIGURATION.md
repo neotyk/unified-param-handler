@@ -15,14 +15,14 @@ Each object in the configuration array defines a handler and can have the follow
 *   **`id`**: (string, Required)
     *   A unique internal identifier for this handler (e.g., `'fbc'`, `'gclid'`, `'utm_source'`).
     *   Used primarily for logging and debugging purposes.
-*   **`sourceType`**: (string, Required unless handled specially like `userAgent`)
-    *   Specifies where the library should look for the value.
+*   **`sourceType`**: (SourceType, Required)
+    *   Specifies where the library should look for the value. This should be one of the exported values from the `SourceType` enum.
     *   Possible values:
-        *   `'url'`: Look for the value in the URL query parameters only.
-        *   `'cookie'`: Look for the value in the document's cookies only.
-        *   `'url_or_cookie'`: Look in the URL query parameters first. If not found, look in the cookies.
-        *   `'user_agent'`: Special type to read `navigator.userAgent`.
-        *   `'ip_address'`: Special type to fetch the client's IP address from an external service (`https://checkip.amazonaws.com/`).
+        *   `SourceType.URL`: Look for the value in the URL query parameters only.
+        *   `SourceType.COOKIE`: Look for the value in the document's cookies only.
+        *   `SourceType.URL_OR_COOKIE`: Look in the URL query parameters first. If not found, look in the cookies.
+        *   `SourceType.USER_AGENT`: Special type to read `navigator.userAgent`.
+        *   `SourceType.IP_ADDRESS`: Special type to fetch the client's IP address from an external service (`https://checkip.amazonaws.com/`).
 *   **`urlParamName`**: (string, Required if `sourceType` includes `'url'`)
     *   The exact name of the URL query parameter to search for (case-sensitive).
     *   Example: `'fbclid'`, `'utm_source'`.
@@ -167,13 +167,17 @@ If you only need specific handlers or different settings:
 1.  **Define your config:** Create a custom array of handler objects.
 2.  **Pass it during initialization:** Provide your custom array to the initialization function.
 
+> **Note:** When creating a custom configuration, it is highly recommended to import the `SourceType` enum from the library to avoid typos and ensure you are using valid source types.
+
 ```javascript
 // my-custom-config.js
+import { SourceType } from './path/to/constants.js'; // Adjust the path to your node_modules or library file
+
 const myCustomHandlers = [
   // Only handle gclid and utm_source
   {
     id: 'gclid',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'gclid',
     targetInputName: 'google_click_id', // Use a different input name
     setCookie: {
@@ -184,14 +188,14 @@ const myCustomHandlers = [
   },
   {
     id: 'utm_source',
-    sourceType: 'url',
+    sourceType: SourceType.URL,
     urlParamName: 'utm_source',
     targetInputName: 'source_tracker',
   },
   // Add a custom parameter from a cookie
   {
     id: 'affiliate_id',
-    sourceType: 'cookie',
+    sourceType: SourceType.COOKIE,
     cookieName: 'aff_ref',
     targetInputName: 'affiliate_code',
     retryMechanism: { // Retry if cookie isn't immediately available

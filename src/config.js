@@ -6,11 +6,6 @@ import { SourceType } from './constants.js';
  * @typedef {Object} HandlerConfig
  * @property {string} id - Unique internal identifier (e.g., 'fbc', 'gclid', 'utm_source'). Used mainly for logging.
  * @property {SourceType} sourceType - Where to look for the value.
- *   - 'url': Check URL query parameters only.
- *   - 'cookie': Check document cookies only.
- *   - 'url_or_cookie': Check URL first, then cookie if not found in URL.
- *   - 'user_agent': Get the browser's User Agent string.
- *   - 'ip_address': Attempt to fetch the client's IP address (requires a supporting endpoint).
  * @property {string} [urlParamName] - The exact name of the URL query parameter. Required if sourceType includes 'url'.
  * @property {string} [cookieName] - The exact name of the cookie. Required if sourceType includes 'cookie'.
  * @property {string} targetInputName - The 'name' attribute of the target hidden input field.
