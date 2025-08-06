@@ -1,6 +1,6 @@
 {
   "name": "unified-param-handler",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "Handles URL parameters and cookies, updating hidden fields.",
   "main": "dist/unified-handler.js",
   "module": "dist/unified-handler.js",
