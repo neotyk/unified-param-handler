@@ -78,98 +78,206 @@ function waitForCookieAndUpdateInput(
 }
 
 /**
- * Processes a single handler configuration.
- * This function is now focused on finding the final value for a handler
- * and updating the input field if it exists on the page.
- *
- * @param {HandlerConfig} config - A single handler configuration object.
+ * Extracts a value from the configured source (URL or cookie).
+ * @param {HandlerConfig} config - The handler configuration.
+ * @returns {{value: string|null, source: string|null}} The found value and its source.
  */
-function processHandler(config) {
-  utils.startGroup(`Processing Handler: ${config.id}`, true);
-
-  // --- 1. Find a fresh value from URL or Cookie ---
-  let freshValue = null;
-  let valueSource = null;
+function extractValueFromSource(config) {
+  let value = null;
+  let source = null;
 
   if (config.sourceType.includes('url') && config.urlParamName) {
     const urlVal = utils.getUrlParams().get(config.urlParamName);
-
-    // MODIFICATION START: Only accept the URL value if it's not null AND not an empty string.
     if (urlVal) {
-      freshValue = urlVal;
-      valueSource = 'url';
+      value = urlVal;
+      source = 'url';
     } else if (urlVal === '') {
-      // Explicitly log when we ignore an empty param from the URL
       utils.logDebug(
-        `Ignoring empty value from URL param '${config.urlParamName}'. Will check other sources.`
+        `Ignoring empty value from URL param '${config.urlParamName}'.`
       );
       if (config.reporting && config.reporting.msClarity) {
         reportToClarity(`uph_${config.id}_status`, 'ignored_empty_url_param');
       }
     }
-    // MODIFICATION END
   }
 
   if (
-    freshValue === null &&
+    value === null &&
     config.sourceType.includes('cookie') &&
     config.cookieName
   ) {
     const cookieVal = utils.getCookie(config.cookieName);
-    // Also check for empty cookie values, just in case
     if (cookieVal) {
-      freshValue = cookieVal;
-      valueSource = 'cookie';
+      value = cookieVal;
+      source = 'cookie';
     }
   }
 
-  // --- 2. If a fresh value was found from the URL, format and persist it ---
-  if (valueSource === 'url') {
-    utils.logDebug(
-      `Found fresh value for '${config.id}' from URL:`,
-      freshValue
-    );
-    let valueToPersist = freshValue;
+  return { value, source };
+}
 
-    // Apply formatting
-    let formatterFunction = null;
-    if (typeof config.applyFormatting === 'function') {
-      formatterFunction = config.applyFormatting;
-    } else if (typeof config.applyFormatting === 'string') {
-      formatterFunction = knownFormatters[config.applyFormatting];
-    }
-    if (formatterFunction) {
-      try {
-        const formatted = formatterFunction(freshValue);
-        if (formatted !== null && formatted !== undefined) {
-          valueToPersist = formatted;
-          utils.logDebug(`Formatted value for '${config.id}':`, valueToPersist);
-        }
-      } catch (e) {
-        utils.logError(
-          `Error applying formatting function for handler '${config.id}': ${e.message}.`
-        );
+/**
+ * Applies formatting, persists the value to localStorage, and sets a cookie.
+ * This is only done for values freshly found from the URL.
+ * @param {string} value - The value to process.
+ * @param {HandlerConfig} config - The handler configuration.
+ * @returns {string} The processed (potentially formatted) value.
+ */
+function applyFormattingAndPersistence(value, config) {
+  utils.logDebug(`Found fresh value for '${config.id}' from URL:`, value);
+  let valueToPersist = value;
+
+  let formatterFunction = null;
+  if (typeof config.applyFormatting === 'function') {
+    formatterFunction = config.applyFormatting;
+  } else if (typeof config.applyFormatting === 'string') {
+    formatterFunction = knownFormatters[config.applyFormatting];
+  }
+
+  if (formatterFunction) {
+    try {
+      const formatted = formatterFunction(value);
+      if (formatted !== null && formatted !== undefined) {
+        valueToPersist = formatted;
+        utils.logDebug(`Formatted value for '${config.id}':`, valueToPersist);
       }
-    }
-
-    // Persist if configured
-    if (config.persist) {
-      utils.saveToPersistentStorage(config.id, valueToPersist);
-    }
-    // Set cookie if configured
-    if (config.setCookie && config.setCookie.enabledOnUrlHit) {
-      utils.setCookie(
-        config.setCookie.cookieNameToSet,
-        valueToPersist,
-        config.setCookie.daysToExpiry
+    } catch (e) {
+      utils.logError(
+        `Error applying formatting function for handler '${config.id}': ${e.message}.`
       );
     }
-    // The fresh, formatted, persisted value is the one we'll use for the input
-    freshValue = valueToPersist;
-    if (config.reporting && config.reporting.msClarity) {
-      reportToClarity(`uph_${config.id}_status`, 'found_url');
-      reportToClarity(`uph_${config.id}_value`, freshValue);
+  }
+
+  if (config.persist) {
+    utils.saveToPersistentStorage(config.id, valueToPersist);
+  }
+  if (config.setCookie && config.setCookie.enabledOnUrlHit) {
+    utils.setCookie(
+      config.setCookie.cookieNameToSet,
+      valueToPersist,
+      config.setCookie.daysToExpiry
+    );
+  }
+
+  if (config.reporting && config.reporting.msClarity) {
+    reportToClarity(`uph_${config.id}_status`, 'found_url');
+    reportToClarity(`uph_${config.id}_value`, valueToPersist);
+  }
+
+  return valueToPersist;
+}
+
+/**
+ * Determines the final value to be used, checking persisted storage if no fresh value was found.
+ * @param {string|null} freshValue - The value from URL/cookie, or null.
+ * @param {string|null} valueSource - The source of the fresh value.
+ * @param {HandlerConfig} config - The handler configuration.
+ * @returns {{finalValue: string|null, finalSource: string|null}} The definitive value and its source.
+ */
+function determineFinalValue(freshValue, valueSource, config) {
+  if (freshValue !== null) {
+    return { finalValue: freshValue, finalSource: valueSource };
+  }
+
+  if (config.persist) {
+    const persistedValue = utils.getFromPersistentStorage(config.id);
+    if (persistedValue) {
+      utils.logDebug(
+        `Using persisted value for '${config.id}':`,
+        persistedValue
+      );
+      if (config.reporting && config.reporting.msClarity) {
+        reportToClarity(`uph_${config.id}_status`, 'found_storage');
+        reportToClarity(`uph_${config.id}_value`, persistedValue);
+      }
+      return { finalValue: persistedValue, finalSource: 'storage' };
     }
+  }
+
+  return { finalValue: null, finalSource: valueSource };
+}
+
+/**
+ * Updates the DOM element with the final value and sets up MutationObserver.
+ * @param {HTMLInputElement|HTMLTextAreaElement} element - The DOM element to update.
+ * @param {string|null} finalValue - The value to set.
+ * @param {string|null} finalSource - The source of the value.
+ * @param {HandlerConfig} config - The handler configuration.
+ */
+function updateInputElement(element, finalValue, finalSource, config) {
+  if (finalValue !== null) {
+    element.value = finalValue;
+    utils.logDebug(
+      `Element '[name="${config.targetInputName}"]' updated. Source: ${
+        finalSource || 'none'
+      }.`
+    );
+
+    if (config.monitorChanges !== false) {
+      const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+          if (
+            mutation.type === 'attributes' &&
+            mutation.attributeName === 'value'
+          ) {
+            const newValue = element.value;
+            if (newValue !== finalValue) {
+              utils.logDebug(
+                `Value of input [name="${config.targetInputName}"] was changed externally from '${finalValue}' to '${newValue}'. Reporting.`
+              );
+              if (config.reporting && config.reporting.msClarity) {
+                reportToClarity(`uph_${config.id}_overwritten`, 'true');
+                reportToClarity(`uph_${config.id}_original_value`, finalValue);
+                reportToClarity(`uph_${config.id}_new_value`, newValue);
+              }
+              observer.disconnect();
+            }
+          }
+        }
+      });
+      observer.observe(element, { attributes: true });
+      utils.logDebug(
+        `Attached MutationObserver to [name="${config.targetInputName}"].`
+      );
+    }
+  } else {
+    element.value = '';
+    utils.logDebug(
+      `No value found for '${config.id}', cleared element '[name="${config.targetInputName}"]'.`
+    );
+    if (config.reporting && config.reporting.msClarity) {
+      reportToClarity(`uph_${config.id}_status`, 'cleared_input');
+    }
+  }
+
+  if (
+    finalValue === null &&
+    config.sourceType.includes('cookie') &&
+    config.retryMechanism &&
+    config.retryMechanism.enabled
+  ) {
+    waitForCookieAndUpdateInput(
+      config.cookieName,
+      element,
+      config.retryMechanism
+    );
+  }
+}
+
+/**
+ * Processes a single handler configuration.
+ * @param {HandlerConfig} config - A single handler configuration object.
+ */
+function processHandler(config) {
+  utils.startGroup(`Processing Handler: ${config.id}`, true);
+
+  // 1. Find a fresh value from URL or Cookie
+  let { value: freshValue, source: valueSource } =
+    extractValueFromSource(config);
+
+  // 2. If found from URL, format and persist it
+  if (valueSource === 'url') {
+    freshValue = applyFormattingAndPersistence(freshValue, config);
   } else if (valueSource === 'cookie') {
     utils.logDebug(
       `Found fresh value for '${config.id}' from Cookie:`,
@@ -181,23 +289,14 @@ function processHandler(config) {
     }
   }
 
-  // --- 3. Determine the final value for the input field ---
-  let finalValue = freshValue; // Start with the fresh value (which could be null)
-  if (finalValue === null && config.persist) {
-    const persistedValue = utils.getFromPersistentStorage(config.id);
-    if (persistedValue) {
-      // Also check for empty persisted value
-      finalValue = persistedValue;
-      valueSource = 'storage'; // Update source for logging
-      utils.logDebug(`Using persisted value for '${config.id}':`, finalValue);
-      if (config.reporting && config.reporting.msClarity) {
-        reportToClarity(`uph_${config.id}_status`, 'found_storage');
-        reportToClarity(`uph_${config.id}_value`, finalValue);
-      }
-    }
-  }
+  // 3. Determine the final value, checking storage if necessary
+  const { finalValue, finalSource } = determineFinalValue(
+    freshValue,
+    valueSource,
+    config
+  );
 
-  // --- 4. Update Input Field (if it exists) ---
+  // 4. Update Input Field(s) if they exist
   if (config.targetInputName) {
     const targetElements = document.querySelectorAll(
       `input[name="${config.targetInputName}"], textarea[name="${config.targetInputName}"]`
@@ -205,70 +304,7 @@ function processHandler(config) {
 
     if (targetElements.length > 0) {
       targetElements.forEach((element) => {
-        if (finalValue !== null) {
-          element.value = finalValue;
-          utils.logDebug(
-            `Element '[name="${config.targetInputName}"]' updated. Source: ${
-              valueSource || 'none'
-            }.`
-          );
-
-          // --- Monitor for external changes ---
-          if (config.monitorChanges !== false) {
-            const observer = new MutationObserver((mutationsList) => {
-              for (const mutation of mutationsList) {
-                if (
-                  mutation.type === 'attributes' &&
-                  mutation.attributeName === 'value'
-                ) {
-                  const newValue = element.value;
-                  // Check if the new value is actually different
-                  if (newValue !== finalValue) {
-                    utils.logDebug(
-                      `Value of input [name="${config.targetInputName}"] was changed externally from '${finalValue}' to '${newValue}'. Reporting.`
-                    );
-                    if (config.reporting && config.reporting.msClarity) {
-                      reportToClarity(`uph_${config.id}_overwritten`, 'true');
-                      reportToClarity(
-                        `uph_${config.id}_original_value`,
-                        finalValue
-                      );
-                      reportToClarity(`uph_${config.id}_new_value`, newValue);
-                    }
-                    observer.disconnect(); // Self-destruct after firing once
-                  }
-                }
-              }
-            });
-
-            observer.observe(element, { attributes: true });
-            utils.logDebug(
-              `Attached MutationObserver to [name="${config.targetInputName}"].`
-            );
-          }
-        } else {
-          element.value = '';
-          utils.logDebug(
-            `No value found for '${config.id}', cleared element '[name="${config.targetInputName}"]'.`
-          );
-          if (config.reporting && config.reporting.msClarity) {
-            reportToClarity(`uph_${config.id}_status`, 'cleared_input');
-          }
-        }
-        // Handle cookie retry only if no value could be found from any source
-        if (
-          finalValue === null &&
-          config.sourceType.includes('cookie') &&
-          config.retryMechanism &&
-          config.retryMechanism.enabled
-        ) {
-          waitForCookieAndUpdateInput(
-            config.cookieName,
-            element, // Pass the specific element to the retry function
-            config.retryMechanism,
-            1
-          );
-        }
+        updateInputElement(element, finalValue, finalSource, config);
       });
     } else {
       utils.logDebug(
@@ -278,7 +314,7 @@ function processHandler(config) {
         reportToClarity(`uph_${config.id}_status`, 'input_not_found');
       }
     }
-  } else if (freshValue === null) {
+  } else if (finalValue === null) {
     utils.logDebug(
       `No value found for '${config.id}' and no targetInputName specified.`
     );
