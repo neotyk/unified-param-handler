@@ -106,14 +106,15 @@ describe('Core Engine Logic (src/engine.js)', () => {
     expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
-  test('init handles URL_or_Cookie (URL first, FBC)', () => {
+  test('init handles URL_or_Cookie (URL first, FBC) - no existing cookie', () => {
     const fbcConfig = getConfig('fbc');
     const input = addHiddenInput(fbcConfig.targetInputName);
     Object.defineProperty(window.location, 'search', {
       value: '?fbclid=test-fbclid-url-789',
       writable: true,
     });
-    document.cookie = '_fbc=fb.1.xxxx.cookievalue';
+    // No existing _fbc cookie
+    document.cookie = '';
     jest.spyOn(utils.getUrlParams(), 'get').mockImplementation((param) => {
       if (param === 'fbclid') return 'test-fbclid-url-789';
       return null;
@@ -127,6 +128,32 @@ describe('Core Engine Logic (src/engine.js)', () => {
       `_fbc=${encodeURIComponent(expectedFormattedValue)}`
     );
     // *** Use the spy variable ***
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
+  });
+
+  test('preserves existing _fbc cookie set by Meta pixel', () => {
+    const fbcConfig = getConfig('fbc');
+    const input = addHiddenInput(fbcConfig.targetInputName);
+
+    // Meta's pixel already set the cookie with proper format
+    document.cookie = '_fbc=fb.1.1234567890.existingFbclid';
+
+    // URL also has fbclid
+    Object.defineProperty(window.location, 'search', {
+      value: '?fbclid=newFbclidFromUrl',
+      writable: true,
+    });
+    jest.spyOn(utils.getUrlParams(), 'get').mockImplementation((param) => {
+      if (param === 'fbclid') return 'newFbclidFromUrl';
+      return null;
+    });
+
+    init([fbcConfig]);
+
+    // Should use Meta's cookie value, not create new one
+    expect(input.value).toBe('fb.1.1234567890.existingFbclid');
+    // Cookie should NOT be overwritten - should still contain original value
+    expect(document.cookie).toContain('fb.1.1234567890.existingFbclid');
     expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
@@ -329,6 +356,41 @@ describe('Core Engine Logic (src/engine.js)', () => {
     expect(document.querySelector('input[name="invalid-input"]').value).toBe(
       ''
     ); // Invalid one skipped
+  });
+
+  test('logs error for unknown formatter string reference', () => {
+    const configWithUnknownFormatter = {
+      id: 'test_unknown_formatter',
+      sourceType: SourceType.URL,
+      urlParamName: 'test_param',
+      targetInputName: 'test-input',
+      applyFormatting: 'nonExistentFormatter',
+    };
+    addHiddenInput('test-input');
+    Object.defineProperty(window.location, 'search', {
+      value: '?test_param=somevalue',
+      writable: true,
+    });
+    jest.spyOn(utils.getUrlParams(), 'get').mockImplementation((param) => {
+      if (param === 'test_param') return 'somevalue';
+      return null;
+    });
+
+    init([configWithUnknownFormatter]);
+
+    // Should log error about unknown formatter
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "[Unified Param Handler Error]: Unknown formatter 'nonExistentFormatter' for handler 'test_unknown_formatter'"
+      )
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Available formatters: formatFbClickId')
+    );
+    // Value should still be set (just unformatted)
+    expect(document.querySelector('input[name="test-input"]').value).toBe(
+      'somevalue'
+    );
   });
 
   // --- New Test for User Agent ---

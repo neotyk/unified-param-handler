@@ -19,11 +19,31 @@ module.exports = (env, _argv) => {
       const resolvedPath = path.resolve(customConfigPath);
       customConfigsContent = require(resolvedPath);
       console.log(`Successfully loaded custom config from: ${resolvedPath}`);
+
+      // Validate config for function references that will be lost during JSON.stringify
+      const configs = Array.isArray(customConfigsContent)
+        ? customConfigsContent
+        : customConfigsContent.default || [];
+
+      configs.forEach((config) => {
+        if (config && typeof config.applyFormatting === 'function') {
+          throw new Error(
+            `Handler '${config.id}' uses a function reference for applyFormatting. ` +
+              `Function references are lost during build serialization. ` +
+              `Use a string reference instead (e.g., applyFormatting: 'formatFbClickId').`
+          );
+        }
+      });
+
       useCustomConfig = true; // Mark that custom config is successfully loaded
     } catch (e) {
       console.error(
         `Error loading custom config from ${customConfigPath}: ${e.message}`
       );
+      // Re-throw to fail the build if it's a validation error
+      if (e.message.includes('function reference')) {
+        throw e;
+      }
     }
   }
 
@@ -97,7 +117,16 @@ module.exports = (env, _argv) => {
           use: {
             loader: 'babel-loader',
             options: {
-              presets: ['@babel/preset-env'],
+              presets: [
+                [
+                  '@babel/preset-env',
+                  {
+                    targets: {
+                      browsers: ['ie 11', 'last 2 versions'],
+                    },
+                  },
+                ],
+              ],
             },
           },
         },
@@ -107,6 +136,6 @@ module.exports = (env, _argv) => {
       minimize: isProduction,
     },
     plugins: plugins, // Use the configured plugins array
-    // target: ['web', 'es5'],
+    target: ['web', 'es5'],
   };
 };

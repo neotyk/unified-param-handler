@@ -134,6 +134,12 @@ function applyFormattingAndPersistence(value, config) {
     formatterFunction = config.applyFormatting;
   } else if (typeof config.applyFormatting === 'string') {
     formatterFunction = knownFormatters[config.applyFormatting];
+    if (!formatterFunction) {
+      utils.logError(
+        `Unknown formatter '${config.applyFormatting}' for handler '${config.id}'. ` +
+          `Available formatters: ${Object.keys(knownFormatters).join(', ')}`
+      );
+    }
   }
 
   if (formatterFunction) {
@@ -150,15 +156,32 @@ function applyFormattingAndPersistence(value, config) {
     }
   }
 
-  if (config.persist) {
-    utils.saveToPersistentStorage(config.id, valueToPersist);
-  }
+  // Check if a valid cookie already exists (e.g., set by Meta's pixel)
+  // If so, preserve it and use its value instead of overwriting
   if (config.setCookie && config.setCookie.enabledOnUrlHit) {
+    const existingCookie = utils.getCookie(config.setCookie.cookieNameToSet);
+    if (existingCookie && existingCookie.startsWith('fb.')) {
+      utils.logDebug(
+        `Preserving existing ${config.setCookie.cookieNameToSet} cookie set by Meta:`,
+        existingCookie
+      );
+      // Update localStorage with the Meta cookie value so forms use the correct value
+      if (config.persist) {
+        utils.saveToPersistentStorage(config.id, existingCookie);
+      }
+      // Return the existing cookie value to be used for form population
+      return existingCookie;
+    }
+    // No valid existing cookie, proceed with setting new one
     utils.setCookie(
       config.setCookie.cookieNameToSet,
       valueToPersist,
       config.setCookie.daysToExpiry
     );
+  }
+
+  if (config.persist) {
+    utils.saveToPersistentStorage(config.id, valueToPersist);
   }
 
   if (config.reporting && config.reporting.msClarity) {

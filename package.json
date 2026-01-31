@@ -22,6 +22,10 @@
     "build:sc:dev": "webpack --mode development --env development --env customConfigPath=./sc-config.js --env customConfigName=sc",
     "build:scus": "webpack --mode production --env production --env customConfigPath=./sc_us-config.js --env customConfigName=scus",
     "build:scus:dev": "webpack --mode development --env development --env customConfigPath=./sc_us-config.js --env customConfigName=scus",
+    "build:c1up": "webpack --mode production --env production --env customConfigPath=./c1up-config.js --env customConfigName=c1up",
+    "build:c1up:dev": "webpack --mode development --env development --env customConfigPath=./c1up-config.js --env customConfigName=c1up",
+    "build:davinci": "webpack --mode production --env production --env customConfigPath=./davinci-config.js --env customConfigName=davinci",
+    "build:davinci:dev": "webpack --mode development --env development --env customConfigPath=./davinci-config.js --env customConfigName=davinci",
     "prepare": "husky",
     "release": "standard-version"
   },
