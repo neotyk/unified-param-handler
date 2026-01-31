@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.3](https://github.com/neotyk/unified-param-handler/compare/v1.8.2...v1.8.3) (2026-01-31)
+
+
+### Bug Fixes
+
+* **fbc:** preserve Meta cookie and add formatter validation ([76d400e](https://github.com/neotyk/unified-param-handler/commit/76d400e0a1bc28989df4460c1f36e96dddd99613))
+
 ### [1.8.2](https://github.com/neotyk/unified-param-handler/compare/v1.8.1...v1.8.2) (2025-08-06)
 
 ### [1.8.1](https://github.com/neotyk/unified-param-handler/compare/v1.8.0...v1.8.1) (2025-08-06)
