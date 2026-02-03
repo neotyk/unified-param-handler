@@ -1,0 +1,17 @@
+homepage: "https://github.com/atomicagility/unified-param-handler"
+documentation: "https://github.com/atomicagility/unified-param-handler/blob/master/unified-param-handler-gtm/README.md"
+versions:
+  - sha: "1.0.0"
+    changeNotes: |
+      Initial release of Unified Parameter Handler GTM Template.
+
+      Features:
+      - Facebook Click ID (fbclid) capture with _fbc cookie formatting
+      - Facebook Browser ID (_fbp) cookie reading
+      - Google Click ID (gclid, wbraid, gbraid) capture
+      - UTM parameter capture with custom field mappings
+      - User Agent capture
+      - Client IP capture via JSONP (ipify.org)
+      - localStorage persistence for cross-page tracking
+      - Custom parameter handler support
+      - Debug logging option
